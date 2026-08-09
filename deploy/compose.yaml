@@ -1,0 +1,22 @@
+# NeoServe reference serving stack for Graviton4.
+# For a specific tuned winner, prefer the per-model recipe the harness emits at
+# results/<run>/serving_recipe/<model>/compose.yaml (it bakes the winning env).
+services:
+  neoserve:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.arm64
+    platform: linux/arm64
+    ports: ["8000:8000"]
+    environment:
+      LD_PRELOAD: "/usr/local/lib/libmimalloc.so"
+      ONEDNN_DEFAULT_FPMATH_MODE: "BF16"
+      VLLM_CPU_KVCACHE_SPACE: "16"
+      # Pin OMP threads to physical cores on the chosen instance, e.g. c8g.4xlarge:
+      VLLM_CPU_OMP_THREADS_BIND: "0-15"
+    command: >
+      neoserve/llama31-8b-w4a8
+      --device cpu --dtype bfloat16
+      --max-model-len 8192 --max-num-batched-tokens 8192
+      --host 0.0.0.0 --port 8000
+    # Recommended: run on c8g.4xlarge (16 vCPU / 32 GB) or larger.

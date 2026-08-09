@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Node / dashboard
+node_modules/
+.next/
+dist/
+out/
+
+# NeoServe run outputs (keep only curated canonical results)
+results/mock-*/
+results/*/raw/
+results/*/performix/*.bin
+*.log
+
+# Models / weights (published to HF, not committed)
+models/
+*.gguf
+*.safetensors
+
+# OS
+.DS_Store
+Thumbs.db

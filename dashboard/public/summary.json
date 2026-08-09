@@ -1,0 +1,439 @@
+{
+  "run_id": "mock-20260809-175629",
+  "generated_at": "2026-08-09T12:26:29Z",
+  "mock": true,
+  "instance": "c8g.4xlarge",
+  "slo": {
+    "ttft_p95_ms": 3000,
+    "tpot_p95_ms": 200
+  },
+  "tokens_per_month_example": 5000000000.0,
+  "models": [
+    {
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "short": "llama31-8b",
+      "instance": "c8g.4xlarge",
+      "baseline_label": "bf16 alloc=glibc bind=auto kv=16g mnbt=4096",
+      "best_label": "w4a8 alloc=mimalloc bind=auto kv=16g mnbt=8192 fpmath=bf16",
+      "baseline": {
+        "candidate_id": "llama31-8b-bf16-28efd78455",
+        "label": "bf16 alloc=glibc bind=auto kv=16g mnbt=4096",
+        "instance": "c8g.4xlarge",
+        "usd_per_hr": 0.63712,
+        "request_rate": 0.25,
+        "output_throughput_tok_s": 32.459039522847156,
+        "ttft_p95_ms": 2867.038231075255,
+        "tpot_p95_ms": 137.27833942525382,
+        "completed_req_s": 0.2494886158973392,
+        "cost_per_1m_tokens": 5.452341793823174,
+        "tokens_per_usd": 183407.4307544101,
+        "perf_per_watt": 0.23185028230605112,
+        "valid": true,
+        "reasons": [],
+        "cost_per_1m": 5.452341793823174
+      },
+      "best": {
+        "candidate_id": "llama31-8b-w4a8-9079cd6e1d",
+        "label": "w4a8 alloc=mimalloc bind=auto kv=16g mnbt=8192 fpmath=bf16",
+        "instance": "c8g.4xlarge",
+        "usd_per_hr": 0.63712,
+        "request_rate": 2.0,
+        "output_throughput_tok_s": 261.3703165151852,
+        "ttft_p95_ms": 2672.223814676715,
+        "tpot_p95_ms": 141.35474892313204,
+        "completed_req_s": 1.9888193738999806,
+        "cost_per_1m_tokens": 0.6771150608737762,
+        "tokens_per_usd": 1476853.872825632,
+        "perf_per_watt": 1.866930832251323,
+        "valid": true,
+        "reasons": [],
+        "cost_per_1m": 0.6771150608737762
+      },
+      "speedup": 8.05231209417681,
+      "quality": {
+        "model_id": "meta-llama/Llama-3.1-8B-Instruct",
+        "precision": "w4a8",
+        "task": "wikitext",
+        "ppl_base": 7.3,
+        "ppl_quant": 7.4319,
+        "delta_pct": 1.807,
+        "max_delta_pct": 3.0,
+        "passed": true,
+        "source": "mock"
+      },
+      "performix_base": {
+        "candidate_id": "llama31-8b-bf16-28efd78455",
+        "label": "bf16 alloc=glibc bind=auto kv=16g mnbt=4096",
+        "topdown": {
+          "retiring": 28.6,
+          "bad_speculation": 6.1,
+          "frontend_bound": 10.1,
+          "backend_bound": 55.1,
+          "memory_bound": 39.7,
+          "core_bound": 15.4,
+          "ipc": 0.89
+        },
+        "hotspots": [
+          {
+            "symbol": "ggml_vec_dot_f16 / bf16 GEMM",
+            "pct": 41.0,
+            "note": "fp32/bf16 matmul, memory-bandwidth bound"
+          },
+          {
+            "symbol": "libgomp barrier wait",
+            "pct": 14.0,
+            "note": "OMP dynamic-schedule contention (no LSE atomics)"
+          },
+          {
+            "symbol": "malloc/page-fault",
+            "pct": 9.0,
+            "note": "glibc allocator page faults under concurrency"
+          }
+        ],
+        "source": "mock"
+      },
+      "performix_best": {
+        "candidate_id": "llama31-8b-w4a8-9079cd6e1d",
+        "label": "w4a8 alloc=mimalloc bind=auto kv=16g mnbt=8192 fpmath=bf16",
+        "topdown": {
+          "retiring": 52.4,
+          "bad_speculation": 4.1,
+          "frontend_bound": 8.8,
+          "backend_bound": 34.7,
+          "memory_bound": 19.1,
+          "core_bound": 15.6,
+          "ipc": 1.73
+        },
+        "hotspots": [
+          {
+            "symbol": "kai_matmul_qai8 (KleidiAI INT4)",
+            "pct": 47.0,
+            "note": "INT8/INT4 SMMLA matmul; weights prepacked at warmup"
+          },
+          {
+            "symbol": "paged_attention_bfmmla",
+            "pct": 12.0,
+            "note": "attention via BFMMLA + poly softmax"
+          },
+          {
+            "symbol": "mimalloc fast-path",
+            "pct": 3.0,
+            "note": "allocator no longer a hotspot"
+          }
+        ],
+        "source": "mock"
+      },
+      "savings": {
+        "baseline_usd_per_month": 27261.70896911587,
+        "best_usd_per_month": 3385.5753043688806,
+        "usd_saved_per_month": 23876.133664746987,
+        "pct_saved": 87.58120663600246,
+        "throughput_speedup_x": 8.05231209417681,
+        "tokens_per_month_example": 5000000000.0
+      },
+      "frontier": [
+        {
+          "candidate_id": "llama31-8b-w4a8-9079cd6e1d",
+          "label": "w4a8 alloc=mimalloc bind=auto kv=16g mnbt=8192 fpmath=bf16",
+          "instance": "c8g.4xlarge",
+          "usd_per_hr": 0.63712,
+          "request_rate": 2.0,
+          "output_throughput_tok_s": 261.3703165151852,
+          "ttft_p95_ms": 2672.223814676715,
+          "tpot_p95_ms": 141.35474892313204,
+          "completed_req_s": 1.9888193738999806,
+          "cost_per_1m_tokens": 0.6771150608737762,
+          "tokens_per_usd": 1476853.872825632,
+          "perf_per_watt": 1.866930832251323,
+          "valid": true,
+          "reasons": [],
+          "cost_per_1m": 0.6771150608737762
+        }
+      ]
+    },
+    {
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "short": "qwen25-7b",
+      "instance": "c8g.4xlarge",
+      "baseline_label": "bf16 alloc=glibc bind=auto kv=16g mnbt=4096",
+      "best_label": "w4a8 alloc=glibc bind=phys kv=16g mnbt=8192 fpmath=bf16 lse",
+      "baseline": {
+        "candidate_id": "qwen25-7b-bf16-e44597c310",
+        "label": "bf16 alloc=glibc bind=auto kv=16g mnbt=4096",
+        "instance": "c8g.4xlarge",
+        "usd_per_hr": 0.63712,
+        "request_rate": 0.25,
+        "output_throughput_tok_s": 31.697401586116193,
+        "ttft_p95_ms": 2746.046707599827,
+        "tpot_p95_ms": 123.77722035297094,
+        "completed_req_s": 0.24873386309112658,
+        "cost_per_1m_tokens": 5.583352859285979,
+        "tokens_per_usd": 179103.85125254001,
+        "perf_per_watt": 0.2264100113294014,
+        "valid": true,
+        "reasons": [],
+        "cost_per_1m": 5.583352859285979
+      },
+      "best": {
+        "candidate_id": "qwen25-7b-w4a8-eb03da2ba4",
+        "label": "w4a8 alloc=glibc bind=phys kv=16g mnbt=8192 fpmath=bf16 lse",
+        "instance": "c8g.4xlarge",
+        "usd_per_hr": 0.63712,
+        "request_rate": 2.0,
+        "output_throughput_tok_s": 258.1852517863773,
+        "ttft_p95_ms": 2211.12299493772,
+        "tpot_p95_ms": 121.51291284657061,
+        "completed_req_s": 1.9750545131290518,
+        "cost_per_1m_tokens": 0.6854681921344188,
+        "tokens_per_usd": 1458856.8973363861,
+        "perf_per_watt": 1.844180369902695,
+        "valid": true,
+        "reasons": [],
+        "cost_per_1m": 0.6854681921344188
+      },
+      "speedup": 8.145312829032184,
+      "quality": {
+        "model_id": "Qwen/Qwen2.5-7B-Instruct",
+        "precision": "w4a8",
+        "task": "wikitext",
+        "ppl_base": 7.9,
+        "ppl_quant": 8.0806,
+        "delta_pct": 2.287,
+        "max_delta_pct": 3.0,
+        "passed": true,
+        "source": "mock"
+      },
+      "performix_base": {
+        "candidate_id": "qwen25-7b-bf16-e44597c310",
+        "label": "bf16 alloc=glibc bind=auto kv=16g mnbt=4096",
+        "topdown": {
+          "retiring": 27.7,
+          "bad_speculation": 5.8,
+          "frontend_bound": 9.8,
+          "backend_bound": 56.7,
+          "memory_bound": 40.9,
+          "core_bound": 15.9,
+          "ipc": 0.9
+        },
+        "hotspots": [
+          {
+            "symbol": "ggml_vec_dot_f16 / bf16 GEMM",
+            "pct": 41.0,
+            "note": "fp32/bf16 matmul, memory-bandwidth bound"
+          },
+          {
+            "symbol": "libgomp barrier wait",
+            "pct": 14.0,
+            "note": "OMP dynamic-schedule contention (no LSE atomics)"
+          },
+          {
+            "symbol": "malloc/page-fault",
+            "pct": 9.0,
+            "note": "glibc allocator page faults under concurrency"
+          }
+        ],
+        "source": "mock"
+      },
+      "performix_best": {
+        "candidate_id": "qwen25-7b-w4a8-eb03da2ba4",
+        "label": "w4a8 alloc=glibc bind=phys kv=16g mnbt=8192 fpmath=bf16 lse",
+        "topdown": {
+          "retiring": 52.8,
+          "bad_speculation": 4.0,
+          "frontend_bound": 9.1,
+          "backend_bound": 34.1,
+          "memory_bound": 18.8,
+          "core_bound": 15.4,
+          "ipc": 1.7
+        },
+        "hotspots": [
+          {
+            "symbol": "kai_matmul_qai8 (KleidiAI INT4)",
+            "pct": 47.0,
+            "note": "INT8/INT4 SMMLA matmul; weights prepacked at warmup"
+          },
+          {
+            "symbol": "paged_attention_bfmmla",
+            "pct": 12.0,
+            "note": "attention via BFMMLA + poly softmax"
+          },
+          {
+            "symbol": "mimalloc fast-path",
+            "pct": 3.0,
+            "note": "allocator no longer a hotspot"
+          }
+        ],
+        "source": "mock"
+      },
+      "savings": {
+        "baseline_usd_per_month": 27916.764296429894,
+        "best_usd_per_month": 3427.340960672094,
+        "usd_saved_per_month": 24489.4233357578,
+        "pct_saved": 87.72300068776096,
+        "throughput_speedup_x": 8.145312829032184,
+        "tokens_per_month_example": 5000000000.0
+      },
+      "frontier": [
+        {
+          "candidate_id": "qwen25-7b-w4a8-eb03da2ba4",
+          "label": "w4a8 alloc=glibc bind=phys kv=16g mnbt=8192 fpmath=bf16 lse",
+          "instance": "c8g.4xlarge",
+          "usd_per_hr": 0.63712,
+          "request_rate": 2.0,
+          "output_throughput_tok_s": 258.1852517863773,
+          "ttft_p95_ms": 2211.12299493772,
+          "tpot_p95_ms": 121.51291284657061,
+          "completed_req_s": 1.9750545131290518,
+          "cost_per_1m_tokens": 0.6854681921344188,
+          "tokens_per_usd": 1458856.8973363861,
+          "perf_per_watt": 1.844180369902695,
+          "valid": true,
+          "reasons": [],
+          "cost_per_1m": 0.6854681921344188
+        }
+      ]
+    },
+    {
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "short": "qwen25-1p5b",
+      "instance": "c8g.4xlarge",
+      "baseline_label": "bf16 alloc=glibc bind=auto kv=16g mnbt=4096",
+      "best_label": "w4a8 alloc=mimalloc bind=phys kv=16g mnbt=2048 fpmath=bf16 lse",
+      "baseline": {
+        "candidate_id": "qwen25-1p5b-bf16-81accc9226",
+        "label": "bf16 alloc=glibc bind=auto kv=16g mnbt=4096",
+        "instance": "c8g.4xlarge",
+        "usd_per_hr": 0.63712,
+        "request_rate": 4.0,
+        "output_throughput_tok_s": 507.8314280444606,
+        "ttft_p95_ms": 1894.9080086919344,
+        "tpot_p95_ms": 133.89693611169753,
+        "completed_req_s": 3.9353478342400363,
+        "cost_per_1m_tokens": 0.34849709569822723,
+        "tokens_per_usd": 2869464.372426008,
+        "perf_per_watt": 3.6273673431747184,
+        "valid": true,
+        "reasons": [],
+        "cost_per_1m": 0.34849709569822723
+      },
+      "best": {
+        "candidate_id": "qwen25-1p5b-w4a8-a803565bae",
+        "label": "w4a8 alloc=mimalloc bind=phys kv=16g mnbt=2048 fpmath=bf16 lse",
+        "instance": "c8g.4xlarge",
+        "usd_per_hr": 0.63712,
+        "request_rate": 4.0,
+        "output_throughput_tok_s": 529.9977930553911,
+        "ttft_p95_ms": 289.10448636451076,
+        "tpot_p95_ms": 23.28463174754887,
+        "completed_req_s": 3.944455246686889,
+        "cost_per_1m_tokens": 0.33392172589534064,
+        "tokens_per_usd": 2994713.7980276993,
+        "perf_per_watt": 3.785698521824222,
+        "valid": true,
+        "reasons": [],
+        "cost_per_1m": 0.33392172589534064
+      },
+      "speedup": 1.0436490610600606,
+      "quality": {
+        "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+        "precision": "w4a8",
+        "task": "wikitext",
+        "ppl_base": 11.4,
+        "ppl_quant": 11.6049,
+        "delta_pct": 1.798,
+        "max_delta_pct": 4.0,
+        "passed": true,
+        "source": "mock"
+      },
+      "performix_base": {
+        "candidate_id": "qwen25-1p5b-bf16-81accc9226",
+        "label": "bf16 alloc=glibc bind=auto kv=16g mnbt=4096",
+        "topdown": {
+          "retiring": 27.9,
+          "bad_speculation": 5.9,
+          "frontend_bound": 9.9,
+          "backend_bound": 56.3,
+          "memory_bound": 40.5,
+          "core_bound": 15.8,
+          "ipc": 0.91
+        },
+        "hotspots": [
+          {
+            "symbol": "ggml_vec_dot_f16 / bf16 GEMM",
+            "pct": 41.0,
+            "note": "fp32/bf16 matmul, memory-bandwidth bound"
+          },
+          {
+            "symbol": "libgomp barrier wait",
+            "pct": 14.0,
+            "note": "OMP dynamic-schedule contention (no LSE atomics)"
+          },
+          {
+            "symbol": "malloc/page-fault",
+            "pct": 9.0,
+            "note": "glibc allocator page faults under concurrency"
+          }
+        ],
+        "source": "mock"
+      },
+      "performix_best": {
+        "candidate_id": "qwen25-1p5b-w4a8-a803565bae",
+        "label": "w4a8 alloc=mimalloc bind=phys kv=16g mnbt=2048 fpmath=bf16 lse",
+        "topdown": {
+          "retiring": 51.7,
+          "bad_speculation": 4.1,
+          "frontend_bound": 8.9,
+          "backend_bound": 35.4,
+          "memory_bound": 19.4,
+          "core_bound": 15.9,
+          "ipc": 1.71
+        },
+        "hotspots": [
+          {
+            "symbol": "kai_matmul_qai8 (KleidiAI INT4)",
+            "pct": 47.0,
+            "note": "INT8/INT4 SMMLA matmul; weights prepacked at warmup"
+          },
+          {
+            "symbol": "paged_attention_bfmmla",
+            "pct": 12.0,
+            "note": "attention via BFMMLA + poly softmax"
+          },
+          {
+            "symbol": "mimalloc fast-path",
+            "pct": 3.0,
+            "note": "allocator no longer a hotspot"
+          }
+        ],
+        "source": "mock"
+      },
+      "savings": {
+        "baseline_usd_per_month": 1742.485478491136,
+        "best_usd_per_month": 1669.6086294767033,
+        "usd_saved_per_month": 72.87684901443276,
+        "pct_saved": 4.182350436431685,
+        "throughput_speedup_x": 1.0436490610600606,
+        "tokens_per_month_example": 5000000000.0
+      },
+      "frontier": [
+        {
+          "candidate_id": "qwen25-1p5b-w4a8-a803565bae",
+          "label": "w4a8 alloc=mimalloc bind=phys kv=16g mnbt=2048 fpmath=bf16 lse",
+          "instance": "c8g.4xlarge",
+          "usd_per_hr": 0.63712,
+          "request_rate": 4.0,
+          "output_throughput_tok_s": 529.9977930553911,
+          "ttft_p95_ms": 289.10448636451076,
+          "tpot_p95_ms": 23.28463174754887,
+          "completed_req_s": 3.944455246686889,
+          "cost_per_1m_tokens": 0.33392172589534064,
+          "tokens_per_usd": 2994713.7980276993,
+          "perf_per_watt": 3.785698521824222,
+          "valid": true,
+          "reasons": [],
+          "cost_per_1m": 0.33392172589534064
+        }
+      ]
+    }
+  ]
+}

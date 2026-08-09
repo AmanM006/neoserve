@@ -1,0 +1,29 @@
+# Models NeoServe optimizes. Small/medium models are the sweet spot for Arm CPU
+# serving (<= ~8B): they fit in memory, hit useful tokens/sec, and win on
+# tokens-per-dollar vs x86 CPU while sidestepping GPU scarcity/cost.
+
+models:
+  - id: meta-llama/Llama-3.1-8B-Instruct
+    short: llama31-8b
+    params_b: 8.0
+    ctx: 8192
+    # Precisions NeoServe will build + benchmark. Each becomes a candidate axis.
+    precisions: [bf16, w8a8, w4a8]
+    quality_task: wikitext          # perplexity guard corpus
+    quality_max_ppl_delta_pct: 3.0  # reject a quant if perplexity worsens > 3%
+
+  - id: Qwen/Qwen2.5-7B-Instruct
+    short: qwen25-7b
+    params_b: 7.6
+    ctx: 8192
+    precisions: [bf16, w8a8, w4a8]
+    quality_task: wikitext
+    quality_max_ppl_delta_pct: 3.0
+
+  - id: Qwen/Qwen2.5-1.5B-Instruct
+    short: qwen25-1p5b
+    params_b: 1.5
+    ctx: 8192
+    precisions: [bf16, w8a8, w4a8]
+    quality_task: wikitext
+    quality_max_ppl_delta_pct: 4.0

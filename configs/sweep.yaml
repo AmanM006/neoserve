@@ -1,0 +1,117 @@
+# NeoServe sweep definition: the optimization space, the concurrency/SLO grid we
+# score against, and the AWS Graviton4 instances (with $/hr) used for economics.
+#
+# Objective: maximize goodput ($/1M tokens at a p95 latency SLO) under real
+# concurrency -- NOT single-stream tokens/sec. This is the whitespace the rest of
+# the field ignores.
+
+# ---------------------------------------------------------------------------
+# 1. Optimization levers (the config space searched per model+precision).
+#    Values reference measured Arm serving optimizations; see README references.
+# ---------------------------------------------------------------------------
+levers:
+  allocator:
+    # glibc malloc suffers page-fault/lock contention on many-core Neoverse.
+    # mimalloc/tcmalloc via LD_PRELOAD is the single biggest low-concurrency win.
+    values: [glibc, tcmalloc, mimalloc]
+    default: glibc
+
+  onednn_fpmath:
+    # ONEDNN_DEFAULT_FPMATH_MODE=bf16 runs fp32 GEMM through Graviton BFMMLA.
+    values: ["", bf16]
+    default: ""
+
+  thread_bind:
+    # VLLM_CPU_OMP_THREADS_BIND: pin OMP threads to physical cores (1 core/vCPU
+    # on Graviton, no SMT). "auto" = all vCPUs, "phys" = pin contiguous set.
+    values: [auto, phys]
+    default: auto
+
+  kv_cache_space_gb:
+    # VLLM_CPU_KVCACHE_SPACE (GiB) reserved for KV cache -> raises max batch.
+    values: [8, 16, 40]
+    default: 16
+
+  max_num_batched_tokens:
+    # Continuous-batching budget; drives throughput vs TTFT tradeoff.
+    values: [2048, 4096, 8192]
+    default: 4096
+
+  lse_atomics:
+    # libgomp built with LSE atomics (LDADDAL) vs LL/SC retry loop.
+    # Quoted so YAML does not coerce off/on to booleans.
+    values: ["off", "on"]
+    default: "off"
+
+# Precision axis is expanded from configs/models.yaml (bf16 / w8a8 / w4a8).
+# bf16 is always the fair baseline every win is measured against.
+
+# ---------------------------------------------------------------------------
+# 2. Search strategy. Full grid is large; use successive-halving so cheap short
+#    trials prune the space before expensive long/high-concurrency trials.
+# ---------------------------------------------------------------------------
+search:
+  strategy: successive_halving   # or: grid | random
+  seed: 1234
+  # Stage 1: short probe on every candidate; keep top fraction.
+  probe:
+    prompts: 64
+    input_len: 256
+    output_len: 64
+    keep_fraction: 0.34
+  # Stage 2: full serving benchmark on survivors at the concurrency grid below.
+  full:
+    prompts: 512
+    input_len: 512
+    output_len: 128
+
+# ---------------------------------------------------------------------------
+# 3. Concurrency grid + SLOs. Goodput = requests meeting the SLO / sec.
+# ---------------------------------------------------------------------------
+# Request rates are CPU-realistic for small-model serving on a single instance:
+# steady-state stable load requires capacity(tok/s) > request_rate * output_len,
+# and 7-8B CPU serving lands in the low-hundreds of tok/s aggregate.
+concurrency:
+  request_rates: [0.25, 0.5, 1, 2, 4]    # requests/sec offered load (inf = saturate)
+  reps: 5                                # >=5 reps per cell for confidence intervals
+  warmup_requests: 16                    # discarded before measurement
+slo:
+  ttft_p95_ms: 3000      # time-to-first-token p95 budget (CPU serving)
+  tpot_p95_ms: 200       # time-per-output-token p95 budget (~5 tok/s readable)
+
+# ---------------------------------------------------------------------------
+# 4. Validity gates: reject a trial's numbers if the host wasn't in a fair state.
+# ---------------------------------------------------------------------------
+gates:
+  max_cpu_temp_c: 85           # thermal throttle guard (if sensor available)
+  max_run_cv_pct: 15           # reject cell if throughput CV across reps > 15%
+  max_load_before_start: 0.5   # 1-min loadavg / vCPU must be below this at start
+  require_no_swap: true        # any swap-in during a trial invalidates it
+
+# ---------------------------------------------------------------------------
+# 5. AWS Graviton4 instances (Neoverse V2) + on-demand $/hr (us-east-1, edit as
+#    needed; use --spot for real runs). Drives tokens-per-dollar economics.
+# ---------------------------------------------------------------------------
+instances:
+  - name: c8g.2xlarge
+    vcpu: 8
+    mem_gb: 16
+    usd_per_hr: 0.31856
+    tdp_w_est: 90     # rough Neoverse V2 socket-share estimate for perf/watt proxy
+  - name: c8g.4xlarge
+    vcpu: 16
+    mem_gb: 32
+    usd_per_hr: 0.63712
+    tdp_w_est: 140
+  - name: c8g.8xlarge
+    vcpu: 32
+    mem_gb: 64
+    usd_per_hr: 1.27424
+    tdp_w_est: 250
+
+# Optional GPU reference point for honest CPU-vs-GPU $/token framing (not a claim
+# that CPU beats a saturated GPU; used to show WHERE CPU serving wins).
+gpu_reference:
+  name: g6.xlarge-L4
+  usd_per_hr: 0.8048
+  note: "saturated small-model GPU endpoint ~$0.10-0.24 / 1M tokens; CPU wins on spiky/low-concurrency + tokens/$ vs x86 CPU"

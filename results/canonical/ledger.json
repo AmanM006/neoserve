@@ -1,0 +1,112 @@
+{
+  "schema": "neoserve.ledger/v1",
+  "generated_at": "2026-08-09T12:26:29Z",
+  "run_dir": "mock-20260809-175629",
+  "files": [
+    {
+      "path": "cost_cards/llama31-8b.json",
+      "sha256": "595317c301c6605d255adafbdc4bbb464d152dd8143404d97db29044f1853240",
+      "bytes": 2241
+    },
+    {
+      "path": "cost_cards/llama31-8b.md",
+      "sha256": "7b08d1677b4e42a1cb71d6e3d0e64374acb5f930d3384ace3e0e9209e20d549e",
+      "bytes": 1257
+    },
+    {
+      "path": "cost_cards/qwen25-1p5b.json",
+      "sha256": "613c9262a6379952b307d22f0af4a8e95ab6a3132d82891acdd5574015c9759f",
+      "bytes": 2239
+    },
+    {
+      "path": "cost_cards/qwen25-1p5b.md",
+      "sha256": "7f89e8452b54a73f3d1d5a68f041eb4df77b8830949cdbc2c94e8c6743286254",
+      "bytes": 1254
+    },
+    {
+      "path": "cost_cards/qwen25-7b.json",
+      "sha256": "4c174aee9365f04f5d59cb0630bbe4b5f8acafe3d52e37fd47272db351541373",
+      "bytes": 2223
+    },
+    {
+      "path": "cost_cards/qwen25-7b.md",
+      "sha256": "9444c752b916c9d962abbd4c97ef01f36460fbd871091381c75a61c716118549",
+      "bytes": 1249
+    },
+    {
+      "path": "model_cards/llama31-8b-w4a8.md",
+      "sha256": "408e4bb09ed62075ced5b8bbc016e84ec2b093ad27ee4a4d67a5d9e621384cda",
+      "bytes": 1076
+    },
+    {
+      "path": "model_cards/qwen25-1p5b-w4a8.md",
+      "sha256": "8341908a7cf3daa2e145aacb9c97b1be6294a982a5aa0b7d41330bd44275d62e",
+      "bytes": 1065
+    },
+    {
+      "path": "model_cards/qwen25-7b-w4a8.md",
+      "sha256": "a69a2f0c6cba1c58db2a02d5fd27b454f5b99abfd2036e34310c58583e8a5e97",
+      "bytes": 1059
+    },
+    {
+      "path": "raw/cells.jsonl",
+      "sha256": "cab44f06da033cd0d3d13a6d759414ec41c60a565001c4eef13de19e00531ebc",
+      "bytes": 621009
+    },
+    {
+      "path": "report.html",
+      "sha256": "87026fe176aa0ccb972876abc75cda340c406508a8ab58ec70091e2f6fabc4d7",
+      "bytes": 3518
+    },
+    {
+      "path": "serving_recipe/llama31-8b/compose.yaml",
+      "sha256": "6d4e0a8b7b6cb2afb3ec561eae37426472538add5eebd7f84a002d7fc89fdd18",
+      "bytes": 384
+    },
+    {
+      "path": "serving_recipe/llama31-8b/Dockerfile.arm64",
+      "sha256": "3b598278ef7053a8a58e5f74b57db9c46028c6ef1fd83c95e63f5a1c2dec9df1",
+      "bytes": 582
+    },
+    {
+      "path": "serving_recipe/llama31-8b/run.sh",
+      "sha256": "13929dd71785415429bff201c0d67c55be539f0e98b8ad417d1ee0eacad6d1f8",
+      "bytes": 372
+    },
+    {
+      "path": "serving_recipe/qwen25-1p5b/compose.yaml",
+      "sha256": "696a15a2478fef03f170bfd37175b7b38ac3a81e72c68f903eff4582ce32a114",
+      "bytes": 424
+    },
+    {
+      "path": "serving_recipe/qwen25-1p5b/Dockerfile.arm64",
+      "sha256": "559058fd41fb21f2ac2c159185e14a6c471c2dd9d1f48dad61f66a29eca216e0",
+      "bytes": 625
+    },
+    {
+      "path": "serving_recipe/qwen25-1p5b/run.sh",
+      "sha256": "ca3bc92b3f6033188ab91140a6b362f506deca85c9de4e44f571e00b812d6bf1",
+      "bytes": 413
+    },
+    {
+      "path": "serving_recipe/qwen25-7b/compose.yaml",
+      "sha256": "57dc218910a2ffab54c9e3ed8a9fdb02a1a1f8f4f3844fec2eefdab1538b53eb",
+      "bytes": 373
+    },
+    {
+      "path": "serving_recipe/qwen25-7b/Dockerfile.arm64",
+      "sha256": "233ecec74d913f6d8d65f0db5046305a7be34b63d2e5cdf6614777e5be679d21",
+      "bytes": 570
+    },
+    {
+      "path": "serving_recipe/qwen25-7b/run.sh",
+      "sha256": "b71087ff77cb37f3fc8b5c203f887521d8067e91f426331031bf09627683ace8",
+      "bytes": 360
+    },
+    {
+      "path": "summary.json",
+      "sha256": "99e1031a49f3ffef8d7c3dfa0b6f29620f4b6ad81115bfb4f6152307be52d03e",
+      "bytes": 15326
+    }
+  ]
+}

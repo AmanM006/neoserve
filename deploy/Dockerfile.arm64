@@ -1,0 +1,27 @@
+# NeoServe base serving image for AWS Graviton4 (Neoverse V2).
+# This is the generic tuned base; per-model winning envs are emitted by the harness
+# under results/<run>/serving_recipe/<model>/ (Dockerfile.arm64 + compose.yaml).
+#
+# Build (on an arm64 host or with buildx):
+#   docker buildx build --platform linux/arm64 -t neoserve:base -f deploy/Dockerfile.arm64 .
+FROM --platform=linux/arm64 vllm/vllm-openai:latest
+
+# mimalloc: the biggest low-concurrency serving win on many-core Neoverse.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libtcmalloc-minimal4 git cmake build-essential && \
+    git clone --depth 1 https://github.com/microsoft/mimalloc /tmp/mimalloc && \
+    cmake -S /tmp/mimalloc -B /tmp/mimalloc/out -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build /tmp/mimalloc/out -j && \
+    cp /tmp/mimalloc/out/libmimalloc.so* /usr/local/lib/ && ldconfig && \
+    rm -rf /var/lib/apt/lists/* /tmp/mimalloc
+
+# Documented default Arm serving optimizations (override per candidate as needed).
+ENV LD_PRELOAD="/usr/local/lib/libmimalloc.so" \
+    ONEDNN_DEFAULT_FPMATH_MODE="BF16" \
+    VLLM_CPU_KVCACHE_SPACE="16"
+
+EXPOSE 8000
+# Model + remaining flags supplied at runtime, e.g.:
+#   docker run --rm -p 8000:8000 neoserve:base \
+#     vllm serve neoserve/llama31-8b-w4a8 --device cpu --dtype bfloat16
+ENTRYPOINT ["python3","-m","vllm.entrypoints.openai.api_server"]

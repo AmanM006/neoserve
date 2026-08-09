@@ -1,0 +1,77 @@
+{
+  "schema": "neoserve.costcard/v1",
+  "generated_at": "2026-08-09T12:26:29Z",
+  "mock": true,
+  "model": {
+    "id": "meta-llama/Llama-3.1-8B-Instruct",
+    "short": "llama31-8b",
+    "params_b": 8.0
+  },
+  "instance": "c8g.4xlarge",
+  "usd_per_hr": 0.63712,
+  "winning_config": "w4a8 alloc=mimalloc bind=auto kv=16g mnbt=8192 fpmath=bf16",
+  "baseline_config": "bf16 alloc=glibc bind=auto kv=16g mnbt=4096",
+  "operating_point": {
+    "request_rate": 2.0,
+    "output_throughput_tok_s": 261.37,
+    "ttft_p95_ms": 2672.2,
+    "tpot_p95_ms": 141.4
+  },
+  "economics": {
+    "cost_per_1m_tokens_usd": 0.6771,
+    "baseline_cost_per_1m_tokens_usd": 5.4523,
+    "tokens_per_usd": 1476854.0,
+    "perf_per_watt_proxy_tok_s_per_w": 1.867,
+    "throughput_speedup_x": 8.05
+  },
+  "quality_guard": {
+    "model_id": "meta-llama/Llama-3.1-8B-Instruct",
+    "precision": "w4a8",
+    "task": "wikitext",
+    "ppl_base": 7.3,
+    "ppl_quant": 7.4319,
+    "delta_pct": 1.807,
+    "max_delta_pct": 3.0,
+    "passed": true,
+    "source": "mock"
+  },
+  "performix_topdown": {
+    "candidate_id": "llama31-8b-w4a8-9079cd6e1d",
+    "label": "w4a8 alloc=mimalloc bind=auto kv=16g mnbt=8192 fpmath=bf16",
+    "topdown": {
+      "retiring": 52.4,
+      "bad_speculation": 4.1,
+      "frontend_bound": 8.8,
+      "backend_bound": 34.7,
+      "memory_bound": 19.1,
+      "core_bound": 15.6,
+      "ipc": 1.73
+    },
+    "hotspots": [
+      {
+        "symbol": "kai_matmul_qai8 (KleidiAI INT4)",
+        "pct": 47.0,
+        "note": "INT8/INT4 SMMLA matmul; weights prepacked at warmup"
+      },
+      {
+        "symbol": "paged_attention_bfmmla",
+        "pct": 12.0,
+        "note": "attention via BFMMLA + poly softmax"
+      },
+      {
+        "symbol": "mimalloc fast-path",
+        "pct": 3.0,
+        "note": "allocator no longer a hotspot"
+      }
+    ],
+    "source": "mock"
+  },
+  "savings_example": {
+    "baseline_usd_per_month": 27261.70896911587,
+    "best_usd_per_month": 3385.5753043688806,
+    "usd_saved_per_month": 23876.133664746987,
+    "pct_saved": 87.58120663600246,
+    "throughput_speedup_x": 8.05231209417681,
+    "tokens_per_month_example": 5000000000.0
+  }
+}
