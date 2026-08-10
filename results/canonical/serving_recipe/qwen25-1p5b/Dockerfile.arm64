@@ -1,11 +1,11 @@
 # NeoServe tuned serving image for qwen25-1p5b (w4a8)
-# Winning config: w4a8 alloc=mimalloc bind=phys kv=16g mnbt=2048 fpmath=bf16 lse  |  target: c8g.4xlarge
+# Winning config: w4a8 alloc=mimalloc bind=phys kv=16g mnbt=2048  |  target: c8g.4xlarge
 FROM --platform=linux/arm64 vllm/vllm-openai:latest
+ENV VLLM_TARGET_DEVICE="cpu"
 ENV LD_PRELOAD="/usr/local/lib/libmimalloc.so"
-ENV ONEDNN_DEFAULT_FPMATH_MODE="BF16"
 ENV VLLM_CPU_OMP_THREADS_BIND="0-15"
 ENV VLLM_CPU_KVCACHE_SPACE="16"
-ENV NEOSERVE_LSE_ATOMICS="on"
+ENV NEOSERVE_LSE_ATOMICS="off"
 EXPOSE 8000
 ENTRYPOINT ["/bin/bash","-lc"]
-CMD ["vllm serve neoserve/qwen25-1p5b-w4a8 --device cpu --dtype bfloat16 --max-model-len 8192 --max-num-batched-tokens 2048 --disable-log-requests --host 0.0.0.0 --port 8000"]
+CMD ["vllm serve models/qwen25-1p5b-w4a8 --dtype bfloat16 --max-model-len 4096 --max-num-batched-tokens 2048 --host 0.0.0.0 --port 8000"]

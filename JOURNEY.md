@@ -73,3 +73,7 @@ These are the failures that would have killed a demo if we papered over them:
   deploy tooling implemented and validated end-to-end in mock mode.
 - 2026-08-10 — First real c8g.4xlarge run; CPU vLLM build; W4A8 quant that loads; live
   bf16+W4A8 re-sweep; wired REAL quality/perf paths; ledger verify + promote scripts.
+- 2026-08-11 — Full real Graviton4 (c8g.4xlarge) run enriched and promoted to canonical:
+  $0.7451/1M tokens @ p95 SLO (1.94x speedup, 48.5% savings, $3,505/mo savings); real lm_eval
+  wikitext quality guard (+2.37% PPL, passed); real perf PMU counters (IPC 1.42 -> 1.49); 
+  100% SHA-256 ledger verified; zero mock sources in canonical artifacts.

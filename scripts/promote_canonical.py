@@ -76,6 +76,8 @@ def main() -> int:
         cells = raw_src / "cells.jsonl"
         if cells.exists():
             shutil.copy2(cells, raw_dst / "cells.jsonl")
+    from harness.artifacts import write_ledger
+    write_ledger(canon)
     print(f"promoted {args.run_dir} -> {canon}")
     return 0
 
