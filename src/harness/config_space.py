@@ -199,6 +199,10 @@ def launch_env(cand: Candidate, instance: InstanceSpec) -> dict[str, str]:
         env["VLLM_CPU_OMP_THREADS_BIND"] = f"0-{max(0, instance.vcpu - 1)}"
 
     env["VLLM_CPU_KVCACHE_SPACE"] = str(cand.kv_cache_space_gb)
+    # Cap KV to leave room for weights on smaller instances (honest capacity).
+    headroom = max(4, int(instance.mem_gb) - 12)
+    if cand.kv_cache_space_gb > headroom:
+        env["VLLM_CPU_KVCACHE_SPACE"] = str(headroom)
     # LSE atomics are a libgomp build property; we surface it for provenance and
     # select the correct libgomp via deploy tooling.
     env["NEOSERVE_LSE_ATOMICS"] = str(cand.lse_atomics)
@@ -209,13 +213,15 @@ def vllm_serve_args(cand: Candidate, model: ModelSpec) -> list[str]:
     """CLI args for `vllm serve` for this candidate."""
     served_model = cand.model_id
     if cand.precision in ("w8a8", "w4a8"):
-        # quantized artifact produced by src/quantize/*, published under this name
-        served_model = f"neoserve/{cand.model_short}-{cand.precision}"
+        # local quantized artifact from src/quantize/*
+        served_model = str(Path("models") / f"{cand.model_short}-{cand.precision}")
+    # Cap context a bit for CPU memory headroom during serving sweeps.
+    max_len = min(model.ctx, 4096)
     return [
         "vllm", "serve", served_model,
         "--device", "cpu",
         "--dtype", "bfloat16",
-        "--max-model-len", str(model.ctx),
+        "--max-model-len", str(max_len),
         "--max-num-batched-tokens", str(cand.max_num_batched_tokens),
         "--disable-log-requests",
     ]

@@ -99,17 +99,55 @@ def optimize_model(
 
     raw_rows: list[dict] = []
 
+    # In real mode, only keep precisions whose artifacts exist (bf16 always ok).
+    if not mock:
+        kept = []
+        for c in pool:
+            if c.precision == "bf16":
+                kept.append(c)
+                continue
+            quant_dir = Path("models") / f"{c.model_short}-{c.precision}"
+            if quant_dir.exists():
+                kept.append(c)
+            else:
+                console.log(f"[{model.short}] skip {c.precision} ({quant_dir} missing)")
+        pool = kept or [baseline_cand]
+
+    def _bench_candidate(c: Candidate, rates: list[float], reps: int,
+                         input_len: int, output_len: int, num_prompts: int
+                         ) -> list[tuple[float, economics.ServingPoint, list[dict]]]:
+        """Run one candidate across rates. Real mode starts/stops vLLM per candidate."""
+        out: list[tuple[float, economics.ServingPoint, list[dict]]] = []
+        if mock:
+            for rate in rates:
+                pt, raw = run_cell(c, model, instance, rate, reps, input_len,
+                                   output_len, num_prompts, gates, mock, rng,
+                                   result_dir=result_dir / "raw")
+                out.append((rate, pt, raw))
+            return out
+        console.log(f"[{model.short}] serving {c.label()} ...")
+        with bench_serving.VllmServer(c, model, instance,
+                                      log_dir=result_dir / "raw") as _srv:
+            for rate in rates:
+                pt, raw = run_cell(c, model, instance, rate, reps, input_len,
+                                   output_len, num_prompts, gates, mock, rng,
+                                   result_dir=result_dir / "raw")
+                out.append((rate, pt, raw))
+        return out
+
     # ---- Stage 1: saturation probe (rank raw capacity, prune) ----
     console.log(f"[{model.short}] probing {len(pool)} candidates ...")
     probe_scores: list[tuple[Candidate, float]] = []
     for c in pool:
-        p, raw = run_cell(c, model, instance, PROBE_RATE, reps=2,
-                          input_len=search["probe"]["input_len"],
-                          output_len=search["probe"]["output_len"],
-                          num_prompts=search["probe"]["prompts"], gates=gates,
-                          mock=mock, rng=rng, result_dir=result_dir / "raw")
-        raw_rows.extend(raw)
-        probe_scores.append((c, p.output_throughput_tok_s))
+        cells = _bench_candidate(
+            c, [PROBE_RATE], reps=2 if mock else 1,
+            input_len=search["probe"]["input_len"],
+            output_len=search["probe"]["output_len"],
+            num_prompts=search["probe"]["prompts"] if mock else min(32, search["probe"]["prompts"]),
+        )
+        for _rate, p, raw in cells:
+            raw_rows.extend(raw)
+            probe_scores.append((c, p.output_throughput_tok_s))
     probe_scores.sort(key=lambda t: t[1], reverse=True)
     keep_n = max(3, int(len(pool) * search["probe"]["keep_fraction"]))
     survivors = [c for c, _ in probe_scores[:keep_n]]
@@ -120,13 +158,16 @@ def optimize_model(
     # ---- Stage 2: full concurrency grid with reps ----
     all_points: list[economics.ServingPoint] = []
     baseline_points: list[economics.ServingPoint] = []
+    full_reps = conc["reps"] if mock else max(3, min(conc["reps"], 3))
+    full_prompts = search["full"]["prompts"] if mock else min(128, search["full"]["prompts"])
     for c in survivors:
-        for rate in conc["request_rates"]:
-            pt, raw = run_cell(c, model, instance, float(rate), reps=conc["reps"],
-                               input_len=search["full"]["input_len"],
-                               output_len=search["full"]["output_len"],
-                               num_prompts=search["full"]["prompts"], gates=gates,
-                               mock=mock, rng=rng, result_dir=result_dir / "raw")
+        cells = _bench_candidate(
+            c, [float(r) for r in conc["request_rates"]], reps=full_reps,
+            input_len=search["full"]["input_len"],
+            output_len=search["full"]["output_len"],
+            num_prompts=full_prompts,
+        )
+        for _rate, pt, raw in cells:
             raw_rows.extend(raw)
             all_points.append(pt)
             if c.id == baseline_cand.id:

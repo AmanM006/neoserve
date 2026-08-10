@@ -1,0 +1,8 @@
+{
+    "key_name":  "neoserve",
+    "my_ip":  "45.112.148.107",
+    "region":  "us-east-1",
+    "vpc":  "vpc-0023ab90c3ed73bc6",
+    "sg":  "sg-0efedf0dddf9befaf",
+    "subnet":  "subnet-0ee3f909efbbdedc2"
+}

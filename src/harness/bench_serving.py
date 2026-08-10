@@ -242,12 +242,13 @@ def run_real_cell(
     cmd = [
         "vllm", "bench", "serve",
         "--backend", "vllm",
+        "--base-url", "http://127.0.0.1:8000",
         "--model", served,
         "--dataset-name", "random",
         "--random-input-len", str(input_len),
         "--random-output-len", str(output_len),
         "--num-prompts", str(num_prompts),
-        "--request-rate", ("inf" if request_rate <= 0 else str(request_rate)),
+        "--request-rate", ("inf" if request_rate <= 0 or request_rate >= 1e8 else str(request_rate)),
         "--percentile-metrics", "ttft,tpot,itl,e2el",
         "--metric-percentiles", "95",
         "--save-result", "--result-filename", str(out_json),
@@ -255,12 +256,22 @@ def run_real_cell(
     subprocess.run(cmd, check=True)
     data = json.loads(out_json.read_text())
 
-    # vLLM benchmark JSON keys (stable across recent versions)
+    def _pick(*keys: str, default: float = 0.0) -> float:
+        for k in keys:
+            if k in data and data[k] is not None:
+                return float(data[k])
+        # nested metrics dict used by some vLLM versions
+        metrics = data.get("metrics") or {}
+        for k in keys:
+            if k in metrics and metrics[k] is not None:
+                return float(metrics[k])
+        return default
+
     return RepMetric(
-        output_throughput_tok_s=float(data.get("output_throughput", 0.0)),
-        ttft_p95_ms=float(data.get("p95_ttft_ms", data.get("p99_ttft_ms", 0.0))),
-        tpot_p95_ms=float(data.get("p95_tpot_ms", data.get("p99_tpot_ms", 0.0))),
-        completed_req_s=float(data.get("request_throughput", 0.0)),
+        output_throughput_tok_s=_pick("output_throughput", "output_tokens_per_second"),
+        ttft_p95_ms=_pick("p95_ttft_ms", "ttft_ms_p95", "mean_ttft_ms"),
+        tpot_p95_ms=_pick("p95_tpot_ms", "tpot_ms_p95", "mean_tpot_ms"),
+        completed_req_s=_pick("request_throughput", "requests_per_second"),
         cpu_temp_c=pre["cpu_temp_c"],
         load_before_start=pre["load_before_start"],
         swap_in_bytes=pre["swap_in_bytes"],
