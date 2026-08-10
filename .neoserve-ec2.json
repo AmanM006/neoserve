@@ -1,8 +1,0 @@
-{
-    "subnet":  "subnet-0ac07c3b15d218399",
-    "instance_id":  "i-03db21119f27082cd",
-    "region":  "us-east-1",
-    "type":  "c8g.4xlarge",
-    "sg":  "sg-0efedf0dddf9befaf",
-    "public_ip":  "13.223.234.156"
-}

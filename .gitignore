@@ -26,3 +26,8 @@ models/
 # OS
 .DS_Store
 Thumbs.db
+
+.neoserve-ec2.json
+deploy/.aws-net.json
+c8g-bootstrap.log
+push_web_deploy.log

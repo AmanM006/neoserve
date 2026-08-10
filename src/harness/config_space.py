@@ -185,11 +185,18 @@ def launch_env(cand: Candidate, instance: InstanceSpec) -> dict[str, str]:
     These map 1:1 to the measured vLLM-on-Arm levers so the harness is honest about
     exactly what produced each number.
     """
-    env: dict[str, str] = {}
+    env: dict[str, str] = {
+        # Critical: pip's default vLLM wheel is GPU-oriented and fails device
+        # inference on Arm CPUs. Force the CPU backend (Graviton build).
+        "VLLM_TARGET_DEVICE": "cpu",
+    }
 
     preload = _ALLOCATOR_PRELOAD.get(cand.allocator, "")
-    if preload:
+    if preload and Path(preload).exists():
         env["LD_PRELOAD"] = preload
+    elif preload:
+        # Host missing the shared lib — don't poison the process; record intent only.
+        env["NEOSERVE_ALLOCATOR_REQUESTED"] = cand.allocator
 
     if cand.onednn_fpmath == "bf16":
         env["ONEDNN_DEFAULT_FPMATH_MODE"] = "BF16"
