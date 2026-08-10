@@ -25,7 +25,6 @@ quant_stage:
     SmoothQuantModifier:
       smoothing_strength: 0.8
     GPTQModifier:
-      sequential_update: true
       dampening_frac: 0.01
       config_groups:
         group_0:
