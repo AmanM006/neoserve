@@ -36,20 +36,40 @@ including the things that didn't pan out. This is NeoServe's running honesty log
 - **Provenance ledger** (SHA-256 over every emitted file) so a judge can trust that the
   numbers in the report came from the committed raw data.
 
-## Known limitations / to validate on real Graviton4 before submission
+## Real Graviton4 scars (2026-08-10)
 
-- The offline `--mock` numbers come from a **grounded simulator** (per-lever multipliers
-  taken from published Neoverse V2 measurements). They exist so the pipeline, report, and
-  dashboard run without spending on AWS. **All headline numbers must be regenerated with
-  `--real` on a `c8g` instance before the Devpost submission.** Every mock artifact is
-  tagged `MOCK`.
-- **Perf-per-watt is a relative proxy only** — Graviton does not expose RAPL, so we use a
-  socket-share TDP estimate and only compare configs on the *same* instance. Never
-  published as an absolute wattage.
-- Real-mode server lifecycle assumes vLLM aarch64 wheels install cleanly; fallback path is
-  `llama.cpp` continuous-batching serving if a specific vLLM CPU feature blocks a model.
+These are the failures that would have killed a demo if we papered over them:
+
+1. **Pip vLLM assumed GPU** → `Failed to infer device type`. Fixed by building vLLM from
+   source with `VLLM_TARGET_DEVICE=cpu` (`deploy/build_vllm_cpu.sh`).
+2. **GPU `torchaudio` wheel** pulled `libcudart.so.13` on a CPU box and crashed import.
+   Uninstalled torchaudio/torchvision for the CPU venv.
+3. **`--disable-log-requests`** is gone on current vLLM CLI → exit code 2. Removed.
+4. **`--device cpu` is not a backend flag** on current vLLM — it is parsed as a device
+   *id* (`ValueError: Non-integer device ID 'cpu'`). CPU is selected via
+   `VLLM_TARGET_DEVICE=cpu` only.
+5. **Loadavg validity gate at 0.5** invalidated every cell after successive server
+   restarts (residual 1-min load). Raised to 1.5 and added a cooldown between candidates;
+   scoring also falls back to SLO-meeting points if all soft-gated.
+6. **First bf16-only real run** (`real-20260810-054859`) produced **winner = baseline,
+   0% savings**. That is an honest non-result — do not promote as a win. The follow-up
+   sweep adds W4A8 + allocators.
+7. **GPTQ / llmcompressor** needed: local calib (HF `wikitext` id broken with current hub),
+   drop deprecated `sequential_update`, and **`ignore: [lm_head]`** so vLLM CPU can load
+   the artifact (`lm_head.weight_scale` otherwise fatal).
+8. **Mock Performix in REAL mode** was a credibility bug. REAL now prefers `apx`, else
+   `perf stat` tagged `source=perf`, and refuses to ship `source=mock` Performix on REAL.
+
+## Known limitations
+
+- Perf-per-watt is a **relative TDP-share proxy** only (no RAPL on Graviton).
+- REAL full-grid uses ≤3 reps for wall-clock; treat winner-confirm as a promote step.
+- LSE atomics are recorded as provenance today; swapping libgomp builds is still deploy
+  tooling, not a one-line env flip on every AMI.
+- Cloud AI credibility still wants at least one **7B/8B** result alongside 1.5B.
 
 ## Log
 - 2026-08-09 — Harness, economics, Performix integration, artifacts, MCP, dashboard, and
-  deploy tooling implemented and validated end-to-end in mock mode. Next: real Graviton4
-  runs for Llama-3.1-8B and Qwen2.5-7B, then swap canonical results and re-record the demo.
+  deploy tooling implemented and validated end-to-end in mock mode.
+- 2026-08-10 — First real c8g.4xlarge run; CPU vLLM build; W4A8 quant that loads; live
+  bf16+W4A8 re-sweep; wired REAL quality/perf paths; ledger verify + promote scripts.

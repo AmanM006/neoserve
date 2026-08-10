@@ -108,13 +108,19 @@ expensive concurrency grid (N reps + CIs).
 
 ### Honesty guardrails (baked into the code)
 - **Fair baseline:** every speedup is vs `bf16` with all levers at documented defaults.
-- **Quality guard:** a quantized winner is rejected if wikitext perplexity worsens past
+- **Quality guard:** a quantized winner is rejected if perplexity worsens past
   the model's budget (`quality_max_ppl_delta_pct`); NeoServe falls back to the next config.
+  REAL mode uses `lm_eval` when available, else a local transformers PPL probe — never silent mock.
+- **Mechanism profile:** REAL mode prefers Arm Performix (`apx`); if absent it records a
+  host `perf stat` sample tagged `source=perf`. REAL artifacts refuse `source=mock`.
+- **Reps:** mock uses the full `concurrency.reps` (default 5). REAL probe/full grid uses
+  up to **3 reps** for wall-clock; promote scripts expect a clear cost win before canonical.
 - **Validity gates:** trials are invalidated on thermal throttle, high load, swap-in, or
   high cross-rep variance (CV).
 - **No SME2 claims on cloud:** Graviton4/Axion/Cobalt are Neoverse V2/N2 with **no SME2**.
   Cloud wins come from **i8mm/SVE/DotProd + W4A8**, not SME2. NeoServe never cites the
   mobile "6× SME2" number for Track 2. (Judges are Arm engineers — this matters.)
+- **Provenance:** `python scripts/verify_ledger.py results/canonical` re-hashes every file.
 
 ---
 

@@ -160,7 +160,9 @@ def optimize_model(
     # ---- Stage 2: full concurrency grid with reps ----
     all_points: list[economics.ServingPoint] = []
     baseline_points: list[economics.ServingPoint] = []
-    full_reps = conc["reps"] if mock else max(3, min(conc["reps"], 3))
+    full_reps = conc["reps"] if mock else max(3, min(int(conc["reps"]), 3))
+    # REAL wall-clock: probe/full use <=3 reps. README documents this; winner-confirm
+    # with full reps is a separate post-sweep step when promoting canonical.
     full_prompts = search["full"]["prompts"] if mock else min(128, search["full"]["prompts"])
     for c in survivors:
         cells = _bench_candidate(
@@ -198,24 +200,39 @@ def optimize_model(
             if wc.precision == "bf16":
                 winner, winner_cand, quality = cand_point, wc, None
                 break
-            q = quality_guard.evaluate_quality_mock(
-                model.id, model.short, wc.precision, model.quality_task,
-                model.quality_max_ppl_delta_pct)
+            quant_path = str(Path("models") / f"{wc.model_short}-{wc.precision}")
+            try:
+                q = quality_guard.evaluate_quality_for_run(
+                    model.id, model.short, wc.precision, model.quality_task,
+                    model.quality_max_ppl_delta_pct, mock=mock,
+                    base_model_path=model.id, quant_model_path=quant_path)
+            except Exception as exc:
+                console.log(f"[yellow]quality guard failed for {wc.precision}: {exc}; skipping")
+                continue
             if q.passed:
                 winner, winner_cand, quality = cand_point, wc, q.as_dict()
                 break
+            console.log(f"[yellow]quality guard rejected {wc.precision} "
+                        f"(delta {q.delta_pct:.2f}% > {q.max_delta_pct}%)")
         else:
             winner_cand = next(c for c in survivors if c.id == winner.candidate_id)
     else:
         winner_cand = baseline_cand
         winner = baseline_pt
 
-    # ---- Performix top-down on baseline + winner ----
-    perf_base = performix.profile_mock(baseline_cand.id, baseline_cand.label(),
-                                       "bf16", tuned=False)
-    perf_best = performix.profile_mock(winner_cand.id, winner_cand.label(),
-                                       winner_cand.precision,
-                                       tuned=not winner_cand.is_baseline())
+    # ---- Performix / perf top-down on baseline + winner ----
+    # REAL runs never emit source=mock (apx if present, else perf_stat).
+    perf_base = performix.profile_for_run(
+        baseline_cand.id, baseline_cand.label(), "bf16",
+        mock=mock, tuned=False, result_dir=result_dir / "performix")
+    perf_best = performix.profile_for_run(
+        winner_cand.id, winner_cand.label(), winner_cand.precision,
+        mock=mock, tuned=not winner_cand.is_baseline(),
+        result_dir=result_dir / "performix")
+    if not mock and perf_base.source == "mock":
+        raise RuntimeError("REAL run produced mock Performix for baseline — refuse to ship")
+    if not mock and perf_best.source == "mock":
+        raise RuntimeError("REAL run produced mock Performix for winner — refuse to ship")
 
     # ---- Economics + savings ----
     savings = economics.savings_vs_baseline(winner, baseline_pt, tokens_per_month)

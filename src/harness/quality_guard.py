@@ -91,6 +91,70 @@ def evaluate_quality_real(model_id: str, base_model_path: str, quant_model_path:
     )
 
 
+def _local_ppl(model_path: str, texts: list[str], max_length: int = 256) -> float:
+    """Lightweight causal LM perplexity without lm_eval (CPU-safe fallback)."""
+    import math
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    tok = AutoTokenizer.from_pretrained(model_path)
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
+    mdl = AutoModelForCausalLM.from_pretrained(
+        model_path, torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32)
+    mdl.eval()
+    nlls, ntok = [], 0
+    with torch.no_grad():
+        for text in texts:
+            enc = tok(text, return_tensors="pt", truncation=True, max_length=max_length)
+            labels = enc["input_ids"].clone()
+            out = mdl(**enc, labels=labels)
+            # out.loss is mean NLL over tokens
+            n_tokens = int(labels.numel())
+            nlls.append(float(out.loss) * n_tokens)
+            ntok += n_tokens
+    mean_nll = sum(nlls) / max(1, ntok)
+    return math.exp(mean_nll)
+
+
+_CALIB_TEXTS = [
+    "Arm Neoverse V2 CPUs on AWS Graviton4 accelerate LLM serving with BF16 and INT8 kernels.",
+    "vLLM continuous batching raises tokens per second under concurrency by packing decode steps.",
+    "Cost aware serving optimizers score dollars per million tokens at a p95 latency SLO.",
+    "Quantizing weights to four bits with eight bit activations reduces memory bandwidth pressure.",
+]
+
+
+def evaluate_quality_for_run(model_id: str, model_short: str, precision: str,
+                             task: str, max_delta_pct: float, *,
+                             mock: bool,
+                             base_model_path: Optional[str] = None,
+                             quant_model_path: Optional[str] = None) -> QualityResult:
+    """REAL path prefers lm_eval, then local transformers PPL; never silent mock."""
+    if mock or precision == "bf16":
+        return evaluate_quality_mock(model_id, model_short, precision, task, max_delta_pct)
+
+    if not base_model_path or not quant_model_path:
+        raise ValueError("real quality guard requires base_model_path and quant_model_path")
+
+    # Try lm_eval first (challenge-grade), then local PPL.
+    try:
+        return evaluate_quality_real(
+            model_id, base_model_path, quant_model_path, precision, task, max_delta_pct)
+    except Exception:
+        pass
+
+    ppl_base = _local_ppl(base_model_path, _CALIB_TEXTS)
+    ppl_quant = _local_ppl(quant_model_path, _CALIB_TEXTS)
+    delta = (ppl_quant - ppl_base) / ppl_base * 100.0
+    return QualityResult(
+        model_id=model_id, precision=precision, task=task,
+        ppl_base=round(ppl_base, 4), ppl_quant=round(ppl_quant, 4),
+        delta_pct=round(delta, 3), max_delta_pct=max_delta_pct,
+        passed=delta <= max_delta_pct, source="local-ppl",
+    )
+
+
 if __name__ == "__main__":
     for prec in ("w8a8", "w4a8"):
         r = evaluate_quality_mock("meta-llama/Llama-3.1-8B-Instruct", "llama31-8b",
