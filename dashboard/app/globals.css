@@ -15,6 +15,11 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink);
 a { color: var(--accent2); }
 .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 80px; }
 .h1 { font-size: 26px; font-weight: 700; margin: 0; }
+.billboard { font-size: 42px; font-weight: 750; margin: 12px 0 4px; letter-spacing: -0.02em;
+  color: var(--accent); line-height: 1.1; }
+.billboard-unit { font-size: 18px; font-weight: 500; color: var(--ink); margin-left: 6px; }
+.billboard-x { display: inline-block; margin-left: 14px; font-size: 18px; font-weight: 600;
+  color: var(--accent2); }
 .sub { color: var(--muted); margin: 4px 0 18px; }
 .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px;
   border: 1px solid var(--line); color: var(--muted); margin-left: 8px; }

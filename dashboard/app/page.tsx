@@ -65,9 +65,14 @@ export default function Page() {
         NeoServe
         <span className={"badge " + (data.mock ? "mock" : "real")}>{data.mock ? "MOCK simulator" : "REAL Graviton4"}</span>
       </p>
+      <p className="billboard">
+        {fmtUsd(m.best.cost_per_1m)}
+        <span className="billboard-unit"> / 1M tokens at SLO</span>
+        <span className="billboard-x">{m.speedup.toFixed(2)}× vs bf16</span>
+      </p>
       <p className="sub">
-        Cost/SLO-aware LLM serving optimizer for AWS Graviton4 (Neoverse V2) &middot; {data.instance} &middot; SLO: TTFT p95 &le;{" "}
-        {data.slo.ttft_p95_ms}ms, TPOT p95 &le; {data.slo.tpot_p95_ms}ms &middot; run {data.run_id}
+        {m.best_label} on {data.instance} &middot; SLO TTFT p95 &le; {data.slo.ttft_p95_ms}ms / TPOT p95 &le;{" "}
+        {data.slo.tpot_p95_ms}ms &middot; run {data.run_id}
       </p>
 
       <div className="tabs">
