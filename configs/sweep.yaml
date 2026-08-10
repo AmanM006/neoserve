@@ -85,7 +85,10 @@ slo:
 gates:
   max_cpu_temp_c: 85           # thermal throttle guard (if sensor available)
   max_run_cv_pct: 15           # reject cell if throughput CV across reps > 15%
-  max_load_before_start: 0.5   # 1-min loadavg / vCPU must be below this at start
+  # Real successive-halving leaves residual 1-min loadavg from the prior
+  # vLLM process; 0.5 was rejecting every cell on a dedicated box. 1.5 still
+  # catches genuinely contended hosts without nuking an otherwise clean sweep.
+  max_load_before_start: 1.5
   require_no_swap: true        # any swap-in during a trial invalidates it
 
 # ---------------------------------------------------------------------------

@@ -224,13 +224,15 @@ def vllm_serve_args(cand: Candidate, model: ModelSpec) -> list[str]:
         served_model = str(Path("models") / f"{cand.model_short}-{cand.precision}")
     # Cap context a bit for CPU memory headroom during serving sweeps.
     max_len = min(model.ctx, 4096)
+    # CPU backend is selected via VLLM_TARGET_DEVICE=cpu in launch_env().
+    # Do NOT pass --device cpu: current vLLM treats --device/--device-ids as
+    # numeric accelerator IDs and crashes with ValueError on the string "cpu".
+    # Also omit --disable-log-requests (removed from newer CLIs; unknown = exit 2).
     return [
         "vllm", "serve", served_model,
-        "--device", "cpu",
         "--dtype", "bfloat16",
         "--max-model-len", str(max_len),
         "--max-num-batched-tokens", str(cand.max_num_batched_tokens),
-        "--disable-log-requests",
     ]
 
 

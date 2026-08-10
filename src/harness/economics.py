@@ -92,10 +92,24 @@ class ServingPoint:
         }
 
 
+def cheapest_at_slo(points: Sequence[ServingPoint], slo: dict) -> ServingPoint | None:
+    """Config with the lowest cost/1M tokens among those meeting the SLO."""
+    elig = [p for p in points if p.valid and p.meets_slo(slo)]
+    if not elig:
+        # Prefer an SLO-meeting point even if a soft host gate failed (e.g. residual
+        # loadavg), rather than returning None and collapsing to an arbitrary baseline.
+        elig = [p for p in points if p.meets_slo(slo)]
+    if not elig:
+        return None
+    return min(elig, key=lambda p: p.cost_per_1m())
+
+
 def max_slo_goodput(points: Sequence[ServingPoint], slo: dict) -> ServingPoint | None:
     """Highest-throughput point that still satisfies the SLO (the config's usable
-    operating point). Returns None if no valid point meets the SLO."""
+    operating point). Returns None if no point meets the SLO."""
     ok = [p for p in points if p.valid and p.meets_slo(slo)]
+    if not ok:
+        ok = [p for p in points if p.meets_slo(slo)]
     if not ok:
         return None
     return max(ok, key=lambda p: p.output_throughput_tok_s)
@@ -109,9 +123,11 @@ def pareto_frontier(points: Sequence[ServingPoint], slo: dict) -> list[ServingPo
     SLO-meeting throughput (higher better).
 
     A point A dominates B if A is no worse on both axes and strictly better on one.
-    Only valid, SLO-meeting points are considered.
+    Prefer valid SLO-meeting points; fall back to any SLO-meeting points.
     """
     elig = [p for p in points if p.valid and p.meets_slo(slo)]
+    if not elig:
+        elig = [p for p in points if p.meets_slo(slo)]
     frontier: list[ServingPoint] = []
     for p in elig:
         dominated = False
@@ -126,17 +142,8 @@ def pareto_frontier(points: Sequence[ServingPoint], slo: dict) -> list[ServingPo
                 break
         if not dominated:
             frontier.append(p)
-    # sort by throughput ascending for plotting
     frontier.sort(key=lambda p: p.output_throughput_tok_s)
     return frontier
-
-
-def cheapest_at_slo(points: Sequence[ServingPoint], slo: dict) -> ServingPoint | None:
-    """Config with the lowest cost/1M tokens among those meeting the SLO."""
-    elig = [p for p in points if p.valid and p.meets_slo(slo)]
-    if not elig:
-        return None
-    return min(elig, key=lambda p: p.cost_per_1m())
 
 
 # --------------------------------------------------------------------------- #

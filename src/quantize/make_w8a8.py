@@ -46,7 +46,11 @@ def build(model: str, out: str, calib_samples: int, seq_len: int,
     tok = AutoTokenizer.from_pretrained(model)
     mdl = AutoModelForCausalLM.from_pretrained(model, torch_dtype="auto", device_map="cpu")
 
-    ds = load_dataset(dataset, split=f"train[:{calib_samples}]")
+    if dataset == "wikitext":
+        ds = load_dataset("wikitext", "wikitext-2-raw-v1",
+                          split=f"train[:{calib_samples}]")
+    else:
+        ds = load_dataset(dataset, split=f"train[:{calib_samples}]")
     text_col = "text" if "text" in ds.column_names else ds.column_names[0]
 
     def tokenize(sample):

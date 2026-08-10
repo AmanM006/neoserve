@@ -45,7 +45,12 @@ def build(model: str, out: str, group_size: int, calib_samples: int,
     tok = AutoTokenizer.from_pretrained(model)
     mdl = AutoModelForCausalLM.from_pretrained(model, torch_dtype="auto", device_map="cpu")
 
-    ds = load_dataset(dataset, split=f"train[:{calib_samples}]")
+    # Plain "wikitext" is not a namespace/name repo id on current HF; pin the config.
+    if dataset == "wikitext":
+        ds = load_dataset("wikitext", "wikitext-2-raw-v1",
+                          split=f"train[:{calib_samples}]")
+    else:
+        ds = load_dataset(dataset, split=f"train[:{calib_samples}]")
     text_col = "text" if "text" in ds.column_names else ds.column_names[0]
     ds = ds.map(lambda s: tok(s[text_col], truncation=True, max_length=seq_len),
                 remove_columns=ds.column_names)
@@ -71,7 +76,8 @@ def main() -> None:
     ap.add_argument("--group-size", type=int, default=128)
     ap.add_argument("--calib-samples", type=int, default=512)
     ap.add_argument("--seq-len", type=int, default=2048)
-    ap.add_argument("--dataset", default="wikitext")
+    ap.add_argument("--dataset", default="wikitext",
+                    help="HF dataset name; wikitext uses config wikitext-2-raw-v1")
     args = ap.parse_args()
     build(args.model, args.out, args.group_size, args.calib_samples,
           args.seq_len, args.dataset)

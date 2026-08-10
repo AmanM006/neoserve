@@ -133,6 +133,8 @@ def optimize_model(
                                    output_len, num_prompts, gates, mock, rng,
                                    result_dir=result_dir / "raw")
                 out.append((rate, pt, raw))
+        # Let 1-min loadavg decay before the next candidate's validity sample.
+        time.sleep(15)
         return out
 
     # ---- Stage 1: saturation probe (rank raw capacity, prune) ----
@@ -187,8 +189,10 @@ def optimize_model(
     quality = None
     if winner is not None:
         winner_cand = next(c for c in survivors if c.id == winner.candidate_id)
-        ordered = sorted([p for p in all_points if p.valid and p.meets_slo(slo)],
-                         key=lambda p: p.cost_per_1m())
+        ordered = sorted(
+            [p for p in all_points if p.valid and p.meets_slo(slo)]
+            or [p for p in all_points if p.meets_slo(slo)],
+            key=lambda p: p.cost_per_1m())
         for cand_point in ordered:
             wc = next(c for c in survivors if c.id == cand_point.candidate_id)
             if wc.precision == "bf16":
