@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-08-11T19:00:00Z",
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "slo_target": "TTFT p95 <= 3000ms, TPOT p95 <= 200ms",
+  "architectures": [
+    {
+      "instance": "c8g.4xlarge (Graviton4)",
+      "architecture": "Arm Neoverse-V2 (SVE2, i8mm, BFMMLA)",
+      "on_demand_hr": 0.63712,
+      "best_precision": "W4A8 (KleidiAI INT4)",
+      "throughput_tok_s": 237.52,
+      "cost_per_1m_tokens": 0.7451,
+      "tokens_per_dollar": 1342077,
+      "monthly_cost_5b_tokens": 3725.57,
+      "savings_vs_x86_pct": 58.4,
+      "winner": true
+    },
+    {
+      "instance": "c7g.4xlarge (Graviton3)",
+      "architecture": "Arm Neoverse-V1 (SVE, i8mm, BFMMLA)",
+      "on_demand_hr": 0.58,
+      "best_precision": "W8A8 (oneDNN INT8)",
+      "throughput_tok_s": 142.1,
+      "cost_per_1m_tokens": 1.1338,
+      "tokens_per_dollar": 881989,
+      "monthly_cost_5b_tokens": 5669.0,
+      "savings_vs_x86_pct": 36.7,
+      "winner": false
+    },
+    {
+      "instance": "c6i.4xlarge (x86 Xeon)",
+      "architecture": "x86 Intel Ice Lake (AVX-512 VNNI)",
+      "on_demand_hr": 0.68,
+      "best_precision": "INT8 (oneDNN VNNI)",
+      "throughput_tok_s": 106.4,
+      "cost_per_1m_tokens": 1.7904,
+      "tokens_per_dollar": 558534,
+      "monthly_cost_5b_tokens": 8952.0,
+      "savings_vs_x86_pct": 0.0,
+      "winner": false
+    },
+    {
+      "instance": "g5.2xlarge (A10G GPU)",
+      "architecture": "NVIDIA Ampere A10G 24GB (Low Concurrency)",
+      "on_demand_hr": 1.212,
+      "best_precision": "FP16 (vLLM CUDA)",
+      "throughput_tok_s": 184.2,
+      "cost_per_1m_tokens": 1.8276,
+      "tokens_per_dollar": 547165,
+      "monthly_cost_5b_tokens": 9138.0,
+      "savings_vs_x86_pct": -2.0,
+      "winner": false
+    }
+  ]
+}

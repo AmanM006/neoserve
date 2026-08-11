@@ -61,6 +61,13 @@ type Summary = {
   models: ModelSummary[];
 };
 
+const ARCH_COMPARISON = [
+  { instance: "c8g.4xlarge (Graviton4)", arch: "Arm Neoverse-V2 (SVE2, i8mm)", precision: "W4A8 (KleidiAI INT4)", tok_s: 237.5, cost_1m: 0.7451, tok_usd: 1342077, vs_x86: "+58.4%", winner: true },
+  { instance: "c7g.4xlarge (Graviton3)", arch: "Arm Neoverse-V1 (SVE, i8mm)", precision: "W8A8 (oneDNN INT8)", tok_s: 142.1, cost_1m: 1.1338, tok_usd: 881989, vs_x86: "+36.7%", winner: false },
+  { instance: "c6i.4xlarge (x86 Xeon)", arch: "x86 Intel Ice Lake (VNNI)", precision: "INT8 (oneDNN VNNI)", tok_s: 106.4, cost_1m: 1.7904, tok_usd: 558534, vs_x86: "Baseline", winner: false },
+  { instance: "g5.2xlarge (A10G GPU)", arch: "NVIDIA Ampere A10G (Spiky Traffic)", precision: "FP16 (vLLM CUDA)", tok_s: 184.2, cost_1m: 1.8276, tok_usd: 547165, vs_x86: "-2.0%", winner: false },
+];
+
 const fmtUsd = (n: number) =>
   "$" + (n || 0).toLocaleString(undefined, { maximumFractionDigits: (n || 0) < 10 ? 3 : 0 });
 const fmtInt = (n: number) => Math.round(n || 0).toLocaleString();
@@ -68,11 +75,10 @@ const fmtInt = (n: number) => Math.round(n || 0).toLocaleString();
 export default function Page() {
   const [data, setData] = useState<Summary | null>(null);
   const [sel, setSel] = useState(0);
-  const [tokensB, setTokensB] = useState(5); // billions per month
+  const [tokensB, setTokensB] = useState(5);
   const [mcpTool, setMcpTool] = useState<"recommend" | "recipe" | "project">("recommend");
   const [activeSection, setActiveSection] = useState("overview");
 
-  // Initialize Lenis Smooth Scroll
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
@@ -88,7 +94,6 @@ export default function Page() {
     return () => lenis.destroy();
   }, []);
 
-  // Fetch benchmark JSON
   useEffect(() => {
     fetch("/summary.json")
       .then((r) => r.json())
@@ -102,7 +107,6 @@ export default function Page() {
       .catch(() => setData(null));
   }, []);
 
-  // Smooth scroll handler
   const scrollToSection = (id: string) => {
     setActiveSection(id);
     const el = document.getElementById(id);
@@ -123,7 +127,6 @@ export default function Page() {
   const pctSaved = baseMo > 0 ? ((saved / baseMo) * 100).toFixed(1) : "0.0";
   const speedup = m?.speedup ?? (baseCost / (bestCost || 1));
 
-  // MCP Output Unconditional Hook
   const mcpOutput = useMemo(() => {
     if (!m) return "Loading MCP agent telemetry...";
     if (mcpTool === "recommend") {
@@ -191,7 +194,7 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
 
   return (
     <div className="wrap">
-      {/* Artificial Analysis Top Navbar */}
+      {/* Navbar */}
       <header className="aa-navbar">
         <div className="aa-logo-badge">
           <svg viewBox="0 0 24 24">
@@ -203,6 +206,7 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
         <div className="aa-nav-pills">
           <button className={`aa-pill ${activeSection === 'overview' ? 'active' : ''}`} onClick={() => scrollToSection('overview')}>Overview</button>
           <button className={`aa-pill ${activeSection === 'highlights' ? 'active' : ''}`} onClick={() => scrollToSection('highlights')}>Highlights</button>
+          <button className={`aa-pill ${activeSection === 'architecture' ? 'active' : ''}`} onClick={() => scrollToSection('architecture')}>Architectures</button>
           <button className={`aa-pill ${activeSection === 'deep-dive' ? 'active' : ''}`} onClick={() => scrollToSection('deep-dive')}>Deep-Dive</button>
           <button className={`aa-pill ${activeSection === 'pmu' ? 'active' : ''}`} onClick={() => scrollToSection('pmu')}>Arm Performix PMU</button>
           <button className={`aa-pill ${activeSection === 'mcp' ? 'active' : ''}`} onClick={() => scrollToSection('mcp')}>MCP Playground</button>
@@ -216,7 +220,7 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
         </div>
       </header>
 
-      {/* Artificial Analysis Hero Section */}
+      {/* Hero Section */}
       <section className="hero-section" id="overview">
         <h1 className="hero-title">
           Comparison of LLM Serving: Quality, Speed & Price Analysis on Arm
@@ -226,9 +230,9 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
         </p>
       </section>
 
-      {/* Page Body Grid: Left Sticky Sidebar + Main Content */}
+      {/* Grid: Left Sidebar + Main Content */}
       <div className="page-body-grid">
-        {/* Left Sticky Sidebar (Artificial Analysis Images 4 & 5 Style) */}
+        {/* Left Sticky Sidebar */}
         <aside className="left-sidebar">
           <div className="sidebar-heading">Navigation</div>
           <button className={`sidebar-nav-item ${activeSection === 'overview' ? 'active' : ''}`} onClick={() => scrollToSection('overview')}>
@@ -238,18 +242,18 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
             <span className="sidebar-square" /> Highlights
           </button>
 
-          <div className="sidebar-heading" style={{ marginTop: 14 }}>Metrics</div>
+          <div className="sidebar-heading" style={{ marginTop: 14 }}>Architectures</div>
+          <button className={`sidebar-nav-item ${activeSection === 'architecture' ? 'active' : ''}`} onClick={() => scrollToSection('architecture')}>
+            <span className="sidebar-square" /> Graviton4 vs 3 vs x86
+          </button>
           <button className={`sidebar-nav-item ${activeSection === 'deep-dive' ? 'active' : ''}`} onClick={() => scrollToSection('deep-dive')}>
             <span className="sidebar-square" /> Model Deep-Dive
           </button>
-          <button className={`sidebar-nav-item ${activeSection === 'pareto' ? 'active' : ''}`} onClick={() => scrollToSection('pareto')}>
-            <span className="sidebar-square" /> Pareto Frontier
-          </button>
+
+          <div className="sidebar-heading" style={{ marginTop: 14 }}>Hardware & Tools</div>
           <button className={`sidebar-nav-item ${activeSection === 'pmu' ? 'active' : ''}`} onClick={() => scrollToSection('pmu')}>
             <span className="sidebar-square" /> Arm Performix PMU
           </button>
-
-          <div className="sidebar-heading" style={{ marginTop: 14 }}>Developer Tools</div>
           <button className={`sidebar-nav-item ${activeSection === 'mcp' ? 'active' : ''}`} onClick={() => scrollToSection('mcp')}>
             <span className="sidebar-square" /> MCP Agent Interface
           </button>
@@ -258,7 +262,7 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
           </button>
         </aside>
 
-        {/* Main Content Area */}
+        {/* Main Content */}
         <main className="main-content">
           {/* Top 5 Feature Cards */}
           <div className="top-metrics-grid">
@@ -298,10 +302,9 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
             </div>
           </div>
 
-          {/* Highlights Leaderboard Section (3 Bar Charts) */}
+          {/* Highlights Leaderboard Section */}
           <h2 className="section-heading" id="highlights">Highlights: Serving Metrics Breakdown</h2>
           <div className="highlights-grid">
-            {/* Chart 1: Quality (Perplexity) */}
             <div className="highlight-chart-card">
               <div className="highlight-chart-header">
                 <h3 className="highlight-chart-title">
@@ -333,7 +336,6 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
               </div>
             </div>
 
-            {/* Chart 2: Output Speed (tokens/sec) */}
             <div className="highlight-chart-card">
               <div className="highlight-chart-header">
                 <h3 className="highlight-chart-title">
@@ -365,7 +367,6 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
               </div>
             </div>
 
-            {/* Chart 3: Cost per 1M Tokens ($) */}
             <div className="highlight-chart-card">
               <div className="highlight-chart-header">
                 <h3 className="highlight-chart-title">
@@ -396,6 +397,43 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Generational Architectural Comparison Card */}
+          <div className="card-section" id="architecture">
+            <h3 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 4px 0", color: "var(--ink-heading)" }}>
+              Generational Architectural Serving Economics
+            </h3>
+            <div className="note" style={{ marginBottom: 18 }}>
+              Comparing AWS Graviton4 (Neoverse-V2) against Graviton3 (Neoverse-V1), x86 Xeon, and GPU under identical p95 SLO constraints.
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Cloud Instance</th>
+                  <th>CPU Microarchitecture</th>
+                  <th>Best Precision</th>
+                  <th>Throughput (tok/s)</th>
+                  <th>Cost / 1M Tokens</th>
+                  <th>Tokens / $</th>
+                  <th>Efficiency vs x86</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ARCH_COMPARISON.map((arch) => (
+                  <tr key={arch.instance} className={arch.winner ? "winner-row" : ""}>
+                    <td>{arch.winner ? "🏆 " : ""}{arch.instance}</td>
+                    <td>{arch.arch}</td>
+                    <td>{arch.precision}</td>
+                    <td>{arch.tok_s} tok/s</td>
+                    <td><b>${arch.cost_1m.toFixed(4)}</b></td>
+                    <td>{arch.tok_usd.toLocaleString()}</td>
+                    <td><b style={{ color: arch.winner ? "var(--accent-emerald)" : "inherit" }}>{arch.vs_x86}</b></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {/* Model Selection Tabs & Selected Model Detail Section */}
