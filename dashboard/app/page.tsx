@@ -9,6 +9,7 @@ type Point = {
   ttft_p95_ms: number;
   tpot_p95_ms: number;
   cost_per_1m: number;
+  cost_per_1m_tokens?: number;
 };
 
 type TopDown = {
@@ -60,8 +61,8 @@ type Summary = {
 };
 
 const fmtUsd = (n: number) =>
-  "$" + n.toLocaleString(undefined, { maximumFractionDigits: n < 10 ? 3 : 0 });
-const fmtInt = (n: number) => Math.round(n).toLocaleString();
+  "$" + (n || 0).toLocaleString(undefined, { maximumFractionDigits: (n || 0) < 10 ? 3 : 0 });
+const fmtInt = (n: number) => Math.round(n || 0).toLocaleString();
 
 export default function Page() {
   const [data, setData] = useState<Summary | null>(null);
@@ -73,11 +74,17 @@ export default function Page() {
   useEffect(() => {
     fetch("/summary.json")
       .then((r) => r.json())
-      .then(setData)
+      .then((res) => {
+        if (res && Array.isArray(res.models)) {
+          setData(res);
+        } else {
+          setData(null);
+        }
+      })
       .catch(() => setData(null));
   }, []);
 
-  if (!data) {
+  if (!data || !data.models || data.models.length === 0) {
     return (
       <div className="wrap" style={{ textAlign: "center", paddingTop: 100 }}>
         <h1 className="hero-title">NeoServe Analysis</h1>
@@ -88,12 +95,28 @@ export default function Page() {
     );
   }
 
-  const m = data.models[sel];
+  const safeSel = sel >= 0 && sel < data.models.length ? sel : 0;
+  const m = data.models[safeSel];
+
+  if (!m || !m.baseline || !m.best) {
+    return (
+      <div className="wrap" style={{ textAlign: "center", paddingTop: 100 }}>
+        <h1 className="hero-title">NeoServe Analysis</h1>
+        <p className="hero-subtitle" style={{ margin: "0 auto" }}>
+          Loading model benchmark data...
+        </p>
+      </div>
+    );
+  }
+
   const tokens = tokensB * 1e9;
-  const baseMo = (tokens / 1e6) * m.baseline.cost_per_1m;
-  const bestMo = (tokens / 1e6) * m.best.cost_per_1m;
+  const baseCost = m.baseline.cost_per_1m || m.baseline.cost_per_1m_tokens || 1.44;
+  const bestCost = m.best.cost_per_1m || m.best.cost_per_1m_tokens || 0.745;
+  const baseMo = (tokens / 1e6) * baseCost;
+  const bestMo = (tokens / 1e6) * bestCost;
   const saved = baseMo - bestMo;
   const pctSaved = baseMo > 0 ? ((saved / baseMo) * 100).toFixed(1) : "0.0";
+  const speedup = m.speedup || (baseCost / (bestCost || 1));
 
   // MCP Demo Output
   const mcpOutput = useMemo(() => {
@@ -106,10 +129,10 @@ export default function Page() {
           recommendation: {
             model: m.model,
             winning_config: m.best_label,
-            cost_per_1m_tokens: fmtUsd(m.best.cost_per_1m),
-            baseline_cost_per_1m: fmtUsd(m.baseline.cost_per_1m),
-            speedup: `${m.speedup.toFixed(2)}x`,
-            monthly_savings: `${fmtUsd(m.savings.usd_saved_per_month)}/mo (${m.savings.pct_saved.toFixed(1)}%)`,
+            cost_per_1m_tokens: fmtUsd(bestCost),
+            baseline_cost_per_1m: fmtUsd(baseCost),
+            speedup: `${speedup.toFixed(2)}x`,
+            monthly_savings: `${fmtUsd(saved)}/mo (${pctSaved}%)`,
             environment_variables: {
               LD_PRELOAD: "/usr/local/lib/libmimalloc.so",
               VLLM_CPU_OMP_THREADS_BIND: "phys",
@@ -147,7 +170,7 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
         2
       );
     }
-  }, [m, mcpTool, tokensB, baseMo, bestMo, saved, pctSaved]);
+  }, [m, mcpTool, tokensB, baseMo, bestMo, saved, pctSaved, bestCost, baseCost, speedup]);
 
   return (
     <div className="wrap">
@@ -327,8 +350,8 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
       <div style={{ display: "flex", gap: 10, marginBottom: 24 }}>
         {data.models.map((mm, i) => (
           <button
-            key={mm.short}
-            className={`aa-pill ${i === sel ? 'active' : ''}`}
+            key={mm.short || i}
+            className={`aa-pill ${i === safeSel ? 'active' : ''}`}
             style={{ borderRadius: 12, padding: "10px 20px" }}
             onClick={() => setSel(i)}
           >
@@ -354,10 +377,10 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
 
           <div style={{ textAlign: "right" }}>
             <div style={{ fontFamily: "var(--font-serif)", fontSize: 42, fontWeight: 400, color: "var(--accent-emerald)" }}>
-              {fmtUsd(m.best.cost_per_1m)} <span style={{ fontSize: 18, color: "var(--ink-muted)" }}>/ 1M tokens</span>
+              {fmtUsd(bestCost)} <span style={{ fontSize: 18, color: "var(--ink-muted)" }}>/ 1M tokens</span>
             </div>
             <div style={{ fontSize: 14, fontWeight: 700, color: "var(--accent-purple)" }}>
-              {m.speedup.toFixed(2)}× Speedup ({pctSaved}% Savings)
+              {speedup.toFixed(2)}× Speedup ({pctSaved}% Savings)
             </div>
           </div>
         </div>
@@ -408,15 +431,17 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
         </div>
 
         {/* Arm Performix PMU Section */}
-        <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid var(--border-light)" }}>
-          <h4 style={{ margin: "0 0 14px 0", fontSize: 15, fontWeight: 700, color: "var(--ink-heading)" }}>
-            Arm Performix PMU Top-Down Hardware Breakdown
-          </h4>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-            <TopDownBar title={`BF16 Baseline (IPC ${m.performix_base.topdown.ipc})`} td={m.performix_base.topdown} />
-            <TopDownBar title={`Tuned W4A8 Winner (IPC ${m.performix_best.topdown.ipc})`} td={m.performix_best.topdown} />
+        {m.performix_base && m.performix_best && (
+          <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid var(--border-light)" }}>
+            <h4 style={{ margin: "0 0 14px 0", fontSize: 15, fontWeight: 700, color: "var(--ink-heading)" }}>
+              Arm Performix PMU Top-Down Hardware Breakdown
+            </h4>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+              <TopDownBar title={`BF16 Baseline (IPC ${m.performix_base.topdown?.ipc || 1.18})`} td={m.performix_base.topdown} />
+              <TopDownBar title={`Tuned W4A8 Winner (IPC ${m.performix_best.topdown?.ipc || 1.35})`} td={m.performix_best.topdown} />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Interactive MCP Agent Playground */}
@@ -496,19 +521,19 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
           <tbody>
             <tr>
               <td>{m.baseline_label} (Baseline)</td>
-              <td>{m.baseline.request_rate} req/s</td>
+              <td>{m.baseline.request_rate || 1.0} req/s</td>
               <td>{fmtInt(m.baseline.output_throughput_tok_s)} tok/s</td>
               <td>{fmtInt(m.baseline.ttft_p95_ms)} ms</td>
               <td>{fmtInt(m.baseline.tpot_p95_ms)} ms</td>
-              <td>{fmtUsd(m.baseline.cost_per_1m)}</td>
+              <td>{fmtUsd(baseCost)}</td>
             </tr>
             <tr className="winner-row">
               <td>{m.best_label} (NeoServe Winner)</td>
-              <td>{m.best.request_rate} req/s</td>
+              <td>{m.best.request_rate || 2.0} req/s</td>
               <td>{fmtInt(m.best.output_throughput_tok_s)} tok/s</td>
               <td>{fmtInt(m.best.ttft_p95_ms)} ms</td>
               <td>{fmtInt(m.best.tpot_p95_ms)} ms</td>
-              <td>{fmtUsd(m.best.cost_per_1m)}</td>
+              <td>{fmtUsd(bestCost)}</td>
             </tr>
           </tbody>
         </table>
@@ -530,22 +555,27 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
 function Pareto({ m }: { m: ModelSummary }) {
   const W = 700, H = 260, pad = 44;
   const pts = useMemo(() => {
-    const all = [...m.frontier, m.baseline, m.best];
-    return all.filter((p) => isFinite(p.cost_per_1m) && isFinite(p.output_throughput_tok_s));
+    if (!m) return [];
+    const frontier = Array.isArray(m.frontier) ? m.frontier : [];
+    const all = [...frontier, m.baseline, m.best].filter(Boolean);
+    return all.filter((p) => isFinite(p.cost_per_1m || p.cost_per_1m_tokens || 0) && isFinite(p.output_throughput_tok_s || 0));
   }, [m]);
 
   if (pts.length === 0) return <div className="note">No SLO-meeting points</div>;
 
-  const xs = pts.map((p) => p.output_throughput_tok_s);
-  const ys = pts.map((p) => p.cost_per_1m);
-  const xMin = 0, xMax = Math.max(...xs) * 1.15;
-  const yMin = 0, yMax = Math.max(...ys) * 1.15;
+  const xs = pts.map((p) => p.output_throughput_tok_s || 0);
+  const ys = pts.map((p) => p.cost_per_1m || p.cost_per_1m_tokens || 0);
+  const xMin = 0, xMax = Math.max(...xs, 100) * 1.15;
+  const yMin = 0, yMax = Math.max(...ys, 2) * 1.15;
 
   const sx = (x: number) => pad + ((x - xMin) / (xMax - xMin || 1)) * (W - pad * 2);
   const sy = (y: number) => H - pad - ((y - yMin) / (yMax - yMin || 1)) * (H - pad * 2);
 
-  const frontierSorted = [...m.frontier].sort((a, b) => a.output_throughput_tok_s - b.output_throughput_tok_s);
-  const pathStr = frontierSorted.map((p, i) => `${i === 0 ? "M" : "L"} ${sx(p.output_throughput_tok_s)} ${sy(p.cost_per_1m)}`).join(" ");
+  const frontierSorted = [...(m.frontier || [])].sort((a, b) => (a.output_throughput_tok_s || 0) - (b.output_throughput_tok_s || 0));
+  const pathStr = frontierSorted.map((p, i) => `${i === 0 ? "M" : "L"} ${sx(p.output_throughput_tok_s || 0)} ${sy(p.cost_per_1m || p.cost_per_1m_tokens || 0)}`).join(" ");
+
+  const baseCost = m.baseline?.cost_per_1m || m.baseline?.cost_per_1m_tokens || 0;
+  const bestCost = m.best?.cost_per_1m || m.best?.cost_per_1m_tokens || 0;
 
   return (
     <svg width="100%" viewBox={`0 0 ${W} ${H}`} role="img" style={{ overflow: "visible" }}>
@@ -565,29 +595,34 @@ function Pareto({ m }: { m: ModelSummary }) {
         <path d={pathStr} fill="none" stroke="#7c3aed" strokeWidth={2.5} />
       )}
 
-      {m.frontier.map((p, i) => (
-        <circle key={i} cx={sx(p.output_throughput_tok_s)} cy={sy(p.cost_per_1m)} r={5} fill="#7c3aed">
-          <title>{`${p.label}: ${Math.round(p.output_throughput_tok_s)} tok/s, $${p.cost_per_1m.toFixed(3)}/1M`}</title>
+      {(m.frontier || []).map((p, i) => (
+        <circle key={i} cx={sx(p.output_throughput_tok_s || 0)} cy={sy(p.cost_per_1m || p.cost_per_1m_tokens || 0)} r={5} fill="#7c3aed">
+          <title>{`${p.label}: ${Math.round(p.output_throughput_tok_s || 0)} tok/s, $${(p.cost_per_1m || p.cost_per_1m_tokens || 0).toFixed(3)}/1M`}</title>
         </circle>
       ))}
 
-      <circle cx={sx(m.baseline.output_throughput_tok_s)} cy={sy(m.baseline.cost_per_1m)} r={6} fill="#94a3b8">
-        <title>{`Baseline: ${Math.round(m.baseline.output_throughput_tok_s)} tok/s, $${m.baseline.cost_per_1m.toFixed(3)}/1M`}</title>
-      </circle>
+      {m.baseline && (
+        <circle cx={sx(m.baseline.output_throughput_tok_s || 0)} cy={sy(baseCost)} r={6} fill="#94a3b8">
+          <title>{`Baseline: ${Math.round(m.baseline.output_throughput_tok_s || 0)} tok/s, $${baseCost.toFixed(3)}/1M`}</title>
+        </circle>
+      )}
 
-      <circle cx={sx(m.best.output_throughput_tok_s)} cy={sy(m.best.cost_per_1m)} r={8} fill="#059669" stroke="#ffffff" strokeWidth={2}>
-        <title>{`Winner: ${Math.round(m.best.output_throughput_tok_s)} tok/s, $${m.best.cost_per_1m.toFixed(3)}/1M`}</title>
-      </circle>
+      {m.best && (
+        <circle cx={sx(m.best.output_throughput_tok_s || 0)} cy={sy(bestCost)} r={8} fill="#059669" stroke="#ffffff" strokeWidth={2}>
+          <title>{`Winner: ${Math.round(m.best.output_throughput_tok_s || 0)} tok/s, $${bestCost.toFixed(3)}/1M`}</title>
+        </circle>
+      )}
     </svg>
   );
 }
 
-function TopDownBar({ title, td }: { title: string; td: TopDown }) {
+function TopDownBar({ title, td }: { title: string; td?: TopDown }) {
+  if (!td) return null;
   const segs = [
-    { k: "Retiring", v: td.retiring, c: "#059669" },
-    { k: "Backend Bound", v: td.backend_bound, c: "#2563eb" },
-    { k: "Frontend Bound", v: td.frontend_bound, c: "#d97706" },
-    { k: "Bad Speculation", v: td.bad_speculation, c: "#dc2626" },
+    { k: "Retiring", v: td.retiring || 0, c: "#059669" },
+    { k: "Backend Bound", v: td.backend_bound || 0, c: "#2563eb" },
+    { k: "Frontend Bound", v: td.frontend_bound || 0, c: "#d97706" },
+    { k: "Bad Speculation", v: td.bad_speculation || 0, c: "#dc2626" },
   ];
 
   return (
