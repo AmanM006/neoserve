@@ -65,6 +65,7 @@ const fmtUsd = (n: number) =>
 const fmtInt = (n: number) => Math.round(n || 0).toLocaleString();
 
 export default function Page() {
+  // ALL REACT HOOKS AT TOP OF COMPONENT (UNCONDITIONAL)
   const [data, setData] = useState<Summary | null>(null);
   const [sel, setSel] = useState(0);
   const [tokensB, setTokensB] = useState(5); // billions per month
@@ -84,42 +85,22 @@ export default function Page() {
       .catch(() => setData(null));
   }, []);
 
-  if (!data || !data.models || data.models.length === 0) {
-    return (
-      <div className="wrap" style={{ textAlign: "center", paddingTop: 100 }}>
-        <h1 className="hero-title">NeoServe Analysis</h1>
-        <p className="hero-subtitle" style={{ margin: "0 auto" }}>
-          Loading real Graviton4 canonical benchmark telemetry...
-        </p>
-      </div>
-    );
-  }
-
-  const safeSel = sel >= 0 && sel < data.models.length ? sel : 0;
-  const m = data.models[safeSel];
-
-  if (!m || !m.baseline || !m.best) {
-    return (
-      <div className="wrap" style={{ textAlign: "center", paddingTop: 100 }}>
-        <h1 className="hero-title">NeoServe Analysis</h1>
-        <p className="hero-subtitle" style={{ margin: "0 auto" }}>
-          Loading model benchmark data...
-        </p>
-      </div>
-    );
-  }
+  // Compute safe model reference for hook calculation
+  const safeSel = data && Array.isArray(data.models) && sel >= 0 && sel < data.models.length ? sel : 0;
+  const m = data?.models?.[safeSel] ?? null;
 
   const tokens = tokensB * 1e9;
-  const baseCost = m.baseline.cost_per_1m || m.baseline.cost_per_1m_tokens || 1.44;
-  const bestCost = m.best.cost_per_1m || m.best.cost_per_1m_tokens || 0.745;
+  const baseCost = m?.baseline?.cost_per_1m ?? m?.baseline?.cost_per_1m_tokens ?? 1.446;
+  const bestCost = m?.best?.cost_per_1m ?? m?.best?.cost_per_1m_tokens ?? 0.745;
   const baseMo = (tokens / 1e6) * baseCost;
   const bestMo = (tokens / 1e6) * bestCost;
   const saved = baseMo - bestMo;
   const pctSaved = baseMo > 0 ? ((saved / baseMo) * 100).toFixed(1) : "0.0";
-  const speedup = m.speedup || (baseCost / (bestCost || 1));
+  const speedup = m?.speedup ?? (baseCost / (bestCost || 1));
 
-  // MCP Demo Output
+  // MCP Demo Output - Unconditional useMemo hook
   const mcpOutput = useMemo(() => {
+    if (!m) return "Loading MCP agent telemetry...";
     if (mcpTool === "recommend") {
       return JSON.stringify(
         {
@@ -171,6 +152,18 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
       );
     }
   }, [m, mcpTool, tokensB, baseMo, bestMo, saved, pctSaved, bestCost, baseCost, speedup]);
+
+  // NOW WE CAN SAFE RETURN FOR LOADING STATE
+  if (!data || !data.models || data.models.length === 0 || !m) {
+    return (
+      <div className="wrap" style={{ textAlign: "center", paddingTop: 100 }}>
+        <h1 className="hero-title">NeoServe Analysis</h1>
+        <p className="hero-subtitle" style={{ margin: "0 auto" }}>
+          Loading real Graviton4 canonical benchmark telemetry...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="wrap">
@@ -519,22 +512,26 @@ ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>{m.baseline_label} (Baseline)</td>
-              <td>{m.baseline.request_rate || 1.0} req/s</td>
-              <td>{fmtInt(m.baseline.output_throughput_tok_s)} tok/s</td>
-              <td>{fmtInt(m.baseline.ttft_p95_ms)} ms</td>
-              <td>{fmtInt(m.baseline.tpot_p95_ms)} ms</td>
-              <td>{fmtUsd(baseCost)}</td>
-            </tr>
-            <tr className="winner-row">
-              <td>{m.best_label} (NeoServe Winner)</td>
-              <td>{m.best.request_rate || 2.0} req/s</td>
-              <td>{fmtInt(m.best.output_throughput_tok_s)} tok/s</td>
-              <td>{fmtInt(m.best.ttft_p95_ms)} ms</td>
-              <td>{fmtInt(m.best.tpot_p95_ms)} ms</td>
-              <td>{fmtUsd(bestCost)}</td>
-            </tr>
+            {m.baseline && (
+              <tr>
+                <td>{m.baseline_label} (Baseline)</td>
+                <td>{m.baseline.request_rate || 1.0} req/s</td>
+                <td>{fmtInt(m.baseline.output_throughput_tok_s)} tok/s</td>
+                <td>{fmtInt(m.baseline.ttft_p95_ms)} ms</td>
+                <td>{fmtInt(m.baseline.tpot_p95_ms)} ms</td>
+                <td>{fmtUsd(baseCost)}</td>
+              </tr>
+            )}
+            {m.best && (
+              <tr className="winner-row">
+                <td>{m.best_label} (NeoServe Winner)</td>
+                <td>{m.best.request_rate || 2.0} req/s</td>
+                <td>{fmtInt(m.best.output_throughput_tok_s)} tok/s</td>
+                <td>{fmtInt(m.best.ttft_p95_ms)} ms</td>
+                <td>{fmtInt(m.best.tpot_p95_ms)} ms</td>
+                <td>{fmtUsd(bestCost)}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
