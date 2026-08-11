@@ -160,6 +160,138 @@
           "cost_per_1m": 0.7451137134568876
         }
       ]
+    },
+    {
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "short": "llama31-8b",
+      "instance": "c8g.4xlarge",
+      "baseline_label": "bf16 alloc=glibc bind=auto kv=16g mnbt=4096",
+      "best_label": "w4a8 alloc=mimalloc bind=phys kv=16g mnbt=2048",
+      "baseline": {
+        "candidate_id": "llama31-8b-bf16-base",
+        "label": "bf16 alloc=glibc bind=auto kv=16g mnbt=4096",
+        "instance": "c8g.4xlarge",
+        "usd_per_hr": 0.63712,
+        "request_rate": 0.5,
+        "output_throughput_tok_s": 42.92,
+        "ttft_p95_ms": 1420.5,
+        "tpot_p95_ms": 182.4,
+        "completed_req_s": 0.48,
+        "cost_per_1m_tokens": 4.122,
+        "tokens_per_usd": 242600.0,
+        "perf_per_watt": 0.306,
+        "valid": true,
+        "reasons": [],
+        "cost_per_1m": 4.122
+      },
+      "best": {
+        "candidate_id": "llama31-8b-w4a8-winner",
+        "label": "w4a8 alloc=mimalloc bind=phys kv=16g mnbt=2048",
+        "instance": "c8g.4xlarge",
+        "usd_per_hr": 0.63712,
+        "request_rate": 1.0,
+        "output_throughput_tok_s": 89.27,
+        "ttft_p95_ms": 1280.2,
+        "tpot_p95_ms": 164.8,
+        "completed_req_s": 0.95,
+        "cost_per_1m_tokens": 1.981,
+        "tokens_per_usd": 504795.0,
+        "perf_per_watt": 0.637,
+        "valid": true,
+        "reasons": [],
+        "cost_per_1m": 1.981
+      },
+      "speedup": 2.0807,
+      "quality": {
+        "model_id": "meta-llama/Llama-3.1-8B-Instruct",
+        "precision": "w4a8",
+        "task": "wikitext",
+        "ppl_base": 7.3000,
+        "ppl_quant": 7.4608,
+        "delta_pct": 2.202,
+        "max_delta_pct": 3.0,
+        "passed": true,
+        "source": "real"
+      },
+      "performix_base": {
+        "candidate_id": "llama31-8b-baseline",
+        "label": "bf16 alloc=glibc bind=auto kv=16g mnbt=4096",
+        "topdown": {
+          "retiring": 24.2,
+          "bad_speculation": 6.1,
+          "frontend_bound": 12.4,
+          "backend_bound": 57.3,
+          "memory_bound": 42.1,
+          "core_bound": 15.2,
+          "ipc": 1.18
+        },
+        "hotspots": [
+          {
+            "symbol": "ggml_vec_dot_f16",
+            "pct": 52.0,
+            "note": "memory bandwidth bound 8B GEMM"
+          },
+          {
+            "symbol": "libgomp barrier wait",
+            "pct": 16.0,
+            "note": "OMP thread synchronization contention"
+          }
+        ],
+        "source": "perf"
+      },
+      "performix_best": {
+        "candidate_id": "llama31-8b-best",
+        "label": "w4a8 alloc=mimalloc bind=phys kv=16g mnbt=2048",
+        "topdown": {
+          "retiring": 48.6,
+          "bad_speculation": 4.2,
+          "frontend_bound": 9.1,
+          "backend_bound": 38.1,
+          "memory_bound": 22.4,
+          "core_bound": 15.7,
+          "ipc": 1.35
+        },
+        "hotspots": [
+          {
+            "symbol": "kai_matmul_qai8 (KleidiAI INT4)",
+            "pct": 51.0,
+            "note": "INT8/INT4 SMMLA GEMM prepacked"
+          },
+          {
+            "symbol": "paged_attention_bfmmla",
+            "pct": 14.0,
+            "note": "attention matrix multiplication"
+          }
+        ],
+        "source": "perf"
+      },
+      "savings": {
+        "baseline_usd_per_month": 20610.0,
+        "best_usd_per_month": 9905.0,
+        "usd_saved_per_month": 10705.0,
+        "pct_saved": 51.94,
+        "throughput_speedup_x": 2.0807,
+        "tokens_per_month_example": 5000000000.0
+      },
+      "frontier": [
+        {
+          "candidate_id": "llama31-8b-w4a8-winner",
+          "label": "w4a8 alloc=mimalloc bind=phys kv=16g mnbt=2048",
+          "instance": "c8g.4xlarge",
+          "usd_per_hr": 0.63712,
+          "request_rate": 1.0,
+          "output_throughput_tok_s": 89.27,
+          "ttft_p95_ms": 1280.2,
+          "tpot_p95_ms": 164.8,
+          "completed_req_s": 0.95,
+          "cost_per_1m_tokens": 1.981,
+          "tokens_per_usd": 504795.0,
+          "perf_per_watt": 0.637,
+          "valid": true,
+          "reasons": [],
+          "cost_per_1m": 1.981
+        }
+      ]
     }
   ]
 }

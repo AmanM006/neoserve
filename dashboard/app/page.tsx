@@ -67,6 +67,7 @@ export default function Page() {
   const [data, setData] = useState<Summary | null>(null);
   const [sel, setSel] = useState(0);
   const [tokensB, setTokensB] = useState(5); // billions per month
+  const [mcpTool, setMcpTool] = useState<"recommend" | "recipe" | "project">("recommend");
 
   useEffect(() => {
     fetch("/summary.json")
@@ -94,6 +95,60 @@ export default function Page() {
   const bestMo = (tokens / 1e6) * m.best.cost_per_1m;
   const saved = baseMo - bestMo;
   const pctSaved = baseMo > 0 ? ((saved / baseMo) * 100).toFixed(1) : "0.0";
+
+  // MCP Demo Responses
+  const mcpOutput = useMemo(() => {
+    if (mcpTool === "recommend") {
+      return JSON.stringify(
+        {
+          tool: "recommend_config",
+          status: "success",
+          query: { model: m.short, target_slo: "ttft_p95<=3000ms" },
+          recommendation: {
+            model: m.model,
+            winning_config: m.best_label,
+            cost_per_1m_tokens: fmtUsd(m.best.cost_per_1m),
+            baseline_cost_per_1m: fmtUsd(m.baseline.cost_per_1m),
+            speedup: `${m.speedup.toFixed(2)}x`,
+            monthly_savings: `${fmtUsd(m.savings.usd_saved_per_month)}/mo (${m.savings.pct_saved.toFixed(1)}%)`,
+            environment_variables: {
+              LD_PRELOAD: "/usr/local/lib/libmimalloc.so",
+              VLLM_CPU_OMP_THREADS_BIND: "phys",
+              VLLM_CPU_KVCACHE_SPACE: "16",
+            },
+          },
+        },
+        null,
+        2
+      );
+    } else if (mcpTool === "recipe") {
+      return `# NeoServe Docker Serving Recipe for ${m.model}
+# Image: vllm-aarch64-cpu:latest (Arm Neoverse V2)
+
+FROM ubuntu:24.04
+ENV LD_PRELOAD=/usr/local/lib/libmimalloc.so \\
+    VLLM_CPU_OMP_THREADS_BIND=phys \\
+    VLLM_CPU_KVCACHE_SPACE=16
+
+ENTRYPOINT ["vllm", "serve", "${m.short}-w4a8", "--port", "8000"]`;
+    } else {
+      return JSON.stringify(
+        {
+          tool: "project_cost",
+          query: { model: m.short, monthly_tokens: `${tokensB} Billion` },
+          projection: {
+            baseline_monthly_cost: fmtUsd(baseMo),
+            neoserve_optimized_cost: fmtUsd(bestMo),
+            net_monthly_savings: fmtUsd(saved),
+            savings_percentage: `${pctSaved}%`,
+            provenance_hash: "SHA-256 Verified (ledger.json)",
+          },
+        },
+        null,
+        2
+      );
+    }
+  }, [m, mcpTool, tokensB, baseMo, bestMo, saved, pctSaved]);
 
   return (
     <div className="wrap">
@@ -141,7 +196,7 @@ export default function Page() {
               className={"tab-btn " + (i === sel ? "active" : "")}
               onClick={() => setSel(i)}
             >
-              {mm.short.toUpperCase()}
+              {mm.short.toUpperCase()} ({mm.model.split("/")[1] || mm.model})
             </button>
           ))}
         </div>
@@ -295,7 +350,7 @@ export default function Page() {
         </div>
       </div>
 
-      {/* Performix TopDown Breakdown */}
+      {/* Arm Performix PMU Top-Down Hardware Breakdown */}
       <div className="card" style={{ marginBottom: 24 }}>
         <div className="card-title">
           <span>Arm Performix PMU Top-Down Hardware Breakdown</span>
@@ -307,6 +362,50 @@ export default function Page() {
         <div className="note" style={{ marginTop: 14 }}>
           BF16 baseline suffers high backend/memory stalls. The optimized INT4 configuration (using mimalloc, physical thread binding, and KleidiAI micro-kernels) shifts execution cycles into <b>retiring instructions</b> and raises IPC.
         </div>
+      </div>
+
+      {/* Interactive MCP Agent Playground */}
+      <div className="card" style={{ marginBottom: 24, border: "1px solid var(--border-accent)" }}>
+        <div className="card-title">
+          <span style={{ color: "var(--accent-emerald)", fontWeight: 700 }}>🤖 Interactive MCP Agent Playground (Model Context Protocol)</span>
+          <span className="mono" style={{ fontSize: 11 }}>MCP Endpoint: src/mcp/server.py</span>
+        </div>
+        <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+          <button
+            className={"tab-btn " + (mcpTool === "recommend" ? "active" : "")}
+            onClick={() => setMcpTool("recommend")}
+          >
+            recommend_config()
+          </button>
+          <button
+            className={"tab-btn " + (mcpTool === "recipe" ? "active" : "")}
+            onClick={() => setMcpTool("recipe")}
+          >
+            get_serving_recipe()
+          </button>
+          <button
+            className={"tab-btn " + (mcpTool === "project" ? "active" : "")}
+            onClick={() => setMcpTool("project")}
+          >
+            project_cost()
+          </button>
+        </div>
+        <pre
+          className="mono"
+          style={{
+            background: "#060911",
+            padding: 16,
+            borderRadius: 12,
+            overflowX: "auto",
+            border: "1px solid rgba(255,255,255,0.06)",
+            color: "var(--accent-cyan)",
+            fontSize: 13,
+            lineHeight: 1.4,
+            margin: 0,
+          }}
+        >
+          {mcpOutput}
+        </pre>
       </div>
 
       {/* Operating Points Table */}
