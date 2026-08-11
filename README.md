@@ -55,11 +55,8 @@ For every benchmarked model, NeoServe emits into [`results/canonical/`](results/
 ## 🚀 Quickstart
 
 ### A. Launch Interactive Dashboard (Pitch-Black Dark UI)
-```bash
-cd dashboard
-npm run refresh     # Syncs results/canonical/summary.json into dashboard data
-npm run dev         # Serves at http://localhost:3010
-```
+- **Live Vercel Web App**: [https://mantleeye.vercel.app](https://mantleeye.vercel.app)
+- **Local Dev Server**: `cd dashboard && npm run refresh && npm run dev` (http://localhost:3010)
 
 ### B. Verify Ledger & Cryptographic Provenance
 ```bash
