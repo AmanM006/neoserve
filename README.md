@@ -55,7 +55,7 @@ For every benchmarked model, NeoServe emits into [`results/canonical/`](results/
 ## 🚀 Quickstart
 
 ### A. Launch Interactive Dashboard (Pitch-Black Dark UI)
-- **Live Vercel Web App**: [https://mantleeye.vercel.app](https://mantleeye.vercel.app)
+- **Live Vercel Web App**: [https://neoserve.vercel.app](https://neoserve.vercel.app)
 - **Local Dev Server**: `cd dashboard && npm run refresh && npm run dev` (http://localhost:3010)
 
 ### B. Verify Ledger & Cryptographic Provenance
