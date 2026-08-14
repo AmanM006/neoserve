@@ -113,20 +113,25 @@ export default function Page() {
     const sections = ["overview", "highlights", "architecture", "deep-dive", "pmu", "mcp", "leaderboard"];
     const handleScroll = () => {
       if (isManualScroll) return;
-      
-      // Bottom of page detection for leaderboard
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 80) {
+
+      const scrollY = window.scrollY;
+      if (scrollY < 100) {
+        setActiveSection("overview");
+        return;
+      }
+
+      const isBottom = window.innerHeight + scrollY >= document.documentElement.scrollHeight - 60;
+      if (isBottom) {
         setActiveSection("leaderboard");
         return;
       }
 
-      const scrollPosition = window.scrollY + 250;
-      for (const id of sections) {
+      const scrollPosition = scrollY + 250;
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const id = sections[i];
         const el = document.getElementById(id);
         if (el) {
-          const top = el.offsetTop;
-          const height = el.offsetHeight;
-          if (scrollPosition >= top && scrollPosition < top + height) {
+          if (scrollPosition >= el.offsetTop) {
             setActiveSection(id);
             break;
           }
