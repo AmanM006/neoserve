@@ -58,7 +58,7 @@ def run_verify_ledger():
         print(f"  [X] Missing {ledger_path}\n")
         return
 
-    ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+    ledger = json.loads(ledger_path.read_text(encoding="utf-8-sig"))
     file_map = ledger.get("files") or ledger
     if isinstance(file_map, list):
         file_map = {e["path"]: e["sha256"] for e in file_map}

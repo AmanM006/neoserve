@@ -17,7 +17,7 @@ class TestLedgerIntegrity(unittest.TestCase):
     def setUp(self):
         self.ledger_path = RESULTS_DIR / "ledger.json"
         self.assertTrue(self.ledger_path.exists(), f"Missing ledger at {self.ledger_path}")
-        self.ledger = json.loads(self.ledger_path.read_text(encoding="utf-8"))
+        self.ledger = json.loads(self.ledger_path.read_text(encoding="utf-8-sig"))
 
     def test_all_hashed_canonical_files_exist_and_match(self):
         file_map = self.ledger.get("files") or self.ledger
@@ -41,7 +41,7 @@ class TestLedgerIntegrity(unittest.TestCase):
     def test_canonical_is_not_mock(self):
         summary_path = RESULTS_DIR / "summary.json"
         self.assertTrue(summary_path.exists())
-        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        summary = json.loads(summary_path.read_text(encoding="utf-8-sig"))
         self.assertFalse(summary.get("mock", True), "Canonical summary must have mock=False")
 
 if __name__ == "__main__":

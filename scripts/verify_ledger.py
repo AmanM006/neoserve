@@ -29,7 +29,7 @@ def main() -> int:
     if not ledger_path.exists():
         print(f"missing {ledger_path}", file=sys.stderr)
         return 2
-    ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+    ledger = json.loads(ledger_path.read_text(encoding="utf-8-sig"))
     entries = ledger.get("files") or ledger.get("entries") or ledger
     if isinstance(entries, dict) and "files" not in ledger:
         # tolerate {relpath: sha} map
