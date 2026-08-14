@@ -107,10 +107,20 @@ export default function Page() {
       .catch(() => setData(null));
   }, []);
 
+  const [isManualScroll, setIsManualScroll] = useState(false);
+
   useEffect(() => {
     const sections = ["overview", "highlights", "architecture", "deep-dive", "pmu", "mcp", "leaderboard"];
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + 200;
+      if (isManualScroll) return;
+      
+      // Bottom of page detection for leaderboard
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 80) {
+        setActiveSection("leaderboard");
+        return;
+      }
+
+      const scrollPosition = window.scrollY + 250;
       for (const id of sections) {
         const el = document.getElementById(id);
         if (el) {
@@ -127,14 +137,18 @@ export default function Page() {
     window.addEventListener("scroll", handleScroll);
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [data]);
+  }, [data, isManualScroll]);
 
   const scrollToSection = (id: string) => {
     setActiveSection(id);
+    setIsManualScroll(true);
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: "smooth" });
     }
+    setTimeout(() => {
+      setIsManualScroll(false);
+    }, 1000);
   };
 
   const safeSel = data && Array.isArray(data.models) && sel >= 0 && sel < data.models.length ? sel : 0;
