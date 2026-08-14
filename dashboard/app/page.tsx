@@ -107,6 +107,28 @@ export default function Page() {
       .catch(() => setData(null));
   }, []);
 
+  useEffect(() => {
+    const sections = ["overview", "highlights", "architecture", "deep-dive", "pmu", "mcp", "leaderboard"];
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 200;
+      for (const id of sections) {
+        const el = document.getElementById(id);
+        if (el) {
+          const top = el.offsetTop;
+          const height = el.offsetHeight;
+          if (scrollPosition >= top && scrollPosition < top + height) {
+            setActiveSection(id);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [data]);
+
   const scrollToSection = (id: string) => {
     setActiveSection(id);
     const el = document.getElementById(id);
