@@ -7,9 +7,9 @@ This mirrors how the Arm MCP Server surfaces migration tooling to assistants, an
 makes NeoServe's results reusable, not just readable.
 
 Run:
-    python -m src.mcp.server
-    or:
-    NEOSERVE_RESULTS=results/canonical python src/mcp/server.py
+    python src/mcp/server.py
+    or to start the stdio server:
+    python src/mcp/server.py --serve
 
 Tools:
     list_models()                       -> models with a tuned result
@@ -117,7 +117,6 @@ def project_cost_impl(model: str, tokens_per_month: float) -> dict:
 # --------------------------------------------------------------------------- #
 def build_server():
     try:
-        # Dynamically import FastMCP avoiding namespace collisions
         import importlib
         mcp_module = importlib.import_module("mcp.server.fastmcp")
         FastMCP = getattr(mcp_module, "FastMCP")
@@ -150,7 +149,6 @@ def build_server():
 
         return mcp
     except Exception:
-        # Standalone CLI mode when FastMCP is not installed in the environment
         class StandaloneCLI:
             def run(self):
                 print(json.dumps({
@@ -162,8 +160,14 @@ def build_server():
 
 
 if __name__ == "__main__":
-    server = build_server()
-    if hasattr(server, "run"):
-        server.run()
+    if len(sys.argv) > 1 and sys.argv[1] == "--serve":
+        server = build_server()
+        if hasattr(server, "run"):
+            server.run()
     else:
-        print(json.dumps(list_models_impl(), indent=2))
+        print(json.dumps({
+            "status": "ok",
+            "mcp_server": "neoserve",
+            "models_available": [m["short"] for m in list_models_impl()],
+            "tools": ["list_models", "recommend_config", "get_serving_recipe", "project_cost"]
+        }, indent=2))
