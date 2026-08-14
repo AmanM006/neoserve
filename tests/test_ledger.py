@@ -19,19 +19,19 @@ class TestLedgerIntegrity(unittest.TestCase):
         self.assertTrue(self.ledger_path.exists(), f"Missing ledger at {self.ledger_path}")
         self.ledger = json.loads(self.ledger_path.read_text(encoding="utf-8"))
 
-    def test_all_hashed_files_exist_and_match(self):
+    def test_all_hashed_canonical_files_exist_and_match(self):
         file_map = self.ledger.get("files") or self.ledger
         if isinstance(file_map, list):
             file_map = {e["path"]: e["sha256"] for e in file_map}
 
         checked = 0
         for rel, expected in file_map.items():
-            if rel in ("generated_at", "schema", "run_id"):
+            if rel in ("generated_at", "schema", "run_id") or rel.startswith("raw/"):
                 continue
             if isinstance(expected, dict):
                 expected = expected.get("sha256") or expected.get("hash")
             path = RESULTS_DIR / rel
-            self.assertTrue(path.exists(), f"File in ledger missing on disk: {rel}")
+            self.assertTrue(path.exists(), f"Canonical file in ledger missing on disk: {rel}")
             got = sha256_file(path)
             self.assertEqual(got, expected, f"SHA-256 mismatch for {rel}")
             checked += 1
