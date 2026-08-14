@@ -1,0 +1,34 @@
+name: 'NeoServe Arm Serving Optimizer & SLO Verifier'
+description: 'Verify Arm64 LLM serving latency SLOs, calculate cost curves ($/1M tokens), and audit SHA-256 evidence'
+author: 'AmanM006'
+branding:
+  icon: 'cpu'
+  color: 'blue'
+
+inputs:
+  results-path:
+    description: 'Path to the NeoServe results directory'
+    required: false
+    default: 'results/canonical'
+  require-real:
+    description: 'Enforce that results must reflect real hardware (mock: false)'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Verify Cryptographic SHA-256 Ledger
+      shell: bash
+      run: |
+        python ${{ github.action_path }}/scripts/verify_ledger.py ${{ inputs.results-path }}
+
+    - name: Run NeoServe Verification Suite
+      shell: bash
+      run: |
+        python ${{ github.action_path }}/scripts/demo.py --all
+
+    - name: Verify KleidiAI AArch64 Micro-Kernel ISA Specs
+      shell: bash
+      run: |
+        python ${{ github.action_path }}/scripts/verify_kernel_isa.py --json

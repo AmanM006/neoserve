@@ -118,11 +118,22 @@ cd results/canonical/serving_recipe/qwen25-1p5b
 docker compose up
 ```
 
-### E. MCP Server for AI Assistants
+### F. Run Full Automated Test Suite
 ```bash
-NEOSERVE_RESULTS=results/canonical PYTHONPATH=src python -m mcp.server
+python -m unittest discover -s tests -v
 ```
-Exposes tools: `recommend_config`, `get_serving_recipe`, `list_models`, `project_cost`.
+
+### G. Static KleidiAI ISA Micro-Kernel Verifier
+```bash
+python scripts/verify_kernel_isa.py
+```
+
+### H. Reusable CI GitHub Action
+```yaml
+- uses: AmanM006/neoserve@main
+  with:
+    results-path: results/canonical
+```
 
 ---
 
@@ -134,8 +145,10 @@ For every benchmarked model, NeoServe emits into [`results/canonical/`](results/
 2. **`model_cards/<model>-<precision>.md`** — Hugging Face model card README for the quantized model.
 3. **`serving_recipe/<model>/`** — Production-ready **`Dockerfile.arm64` + `compose.yaml` + `run.sh`** embedding the exact winning environment variables.
 4. **`ledger.json`** — SHA-256 cryptographic hashes for every emitted artifact, verifiable via `python scripts/verify_ledger.py`.
+5. **`action.yml`** — Plug-and-play GitHub Action for CI regression testing.
 
 ---
 
 ## 📄 License
 Released under the **Apache-2.0 License**. See [LICENSE](LICENSE) for details.
+

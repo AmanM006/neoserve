@@ -36,12 +36,21 @@ cat results/canonical/serving_recipe/qwen25-1p5b/compose.yaml
 
 ### 4. Test Model Context Protocol (MCP) Agent Interface
 ```bash
-NEOSERVE_RESULTS=results/canonical PYTHONPATH=src python -m mcp.server
+NEOSERVE_RESULTS=results/canonical PYTHONPATH=. python src/mcp/server.py
 ```
 Exposes structured JSON tools for AI assistants (Cursor / Claude Desktop):
 - `recommend_config(model="qwen25-1p5b")`
 - `get_serving_recipe(model="qwen25-1p5b")`
 - `project_cost(model="qwen25-1p5b", tokens_per_month=5000000000)`
+
+### 5. Run Full Automated Unit Test Suite & ISA Kernel Verifier
+```bash
+# Run unit tests across economics, ledger, PMU, and MCP tools
+python -m unittest discover -s tests -v
+
+# Inspect KleidiAI Neoverse-V2 assembly instruction stream
+python scripts/verify_kernel_isa.py
+```
 
 ---
 
