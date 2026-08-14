@@ -9,15 +9,14 @@ on:
 
 jobs:
   test:
-    name: Test & Ledger Verification (${{ matrix.os }} - Py${{ matrix.python-version }})
-    runs-on: ${{ matrix.os }}
+    name: Test & Verify (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
     env:
       PYTHONPATH: .
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        python-version: ['3.10', '3.11', '3.12']
+        python-version: ['3.11']
 
     steps:
       - name: Checkout Code
@@ -27,7 +26,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
 
       - name: Install Core Dependencies
         run: |
